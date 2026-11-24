@@ -466,7 +466,7 @@
   const WALK_IN = 4.0, TALK = 3.0, WALK_OUT = 3.2, INTRO_END = WALK_IN + TALK + WALK_OUT;
   const CAL_WHITE = [250, 246, 238], CAL_ORANGE = [242, 150, 60], CAL_BLACK = [74, 64, 70];
   const PINK = [255, 140, 172], EYE_GREEN = [135, 200, 95], EYE = [30, 22, 28], WHITE = [255, 255, 255];
-  const MOUTH = [190, 55, 80];
+  const MOUTH = [110, 25, 45];
 
   const ellipse = (cx, cy, rx, ry) => (X, Y) => ((X - cx) / rx) ** 2 + ((Y - cy) / ry) ** 2 <= 1;
   const capsule = (ax, ay, bx, by, r) => (X, Y) => {
@@ -482,86 +482,141 @@
   const both = (a, b) => (X, Y) => a(X, Y) && b(X, Y);
   const mul = (c, s) => [c[0] * s, c[1] * s, c[2] * s];
 
-  function drawCat(cx, gy, s, t, walk, moving, hop, mouthOpen) {
-    const sx = s * aspect;
-    const c0 = Math.max(0, Math.floor(cx - 2.1 * sx)), c1 = Math.min(cols, Math.floor(cx + 2.2 * sx) + 1);
-    const r0 = Math.max(0, Math.floor(gy - 3.0 * s - hop * s)), r1 = Math.min(rows, Math.floor(gy + 0.3 * s) + 1);
+  // A chibi calico: big round head, fluffy cheeks, shiny eyes, little bean body.
+  // Everything is drawn in cat units (feet on Y = 0, facing right) and squashed,
+  // leaned and bobbed by the pose P, so it moves like a cartoon.
+  const NECK_X = 0.45, NECK_Y = 0.95;      // the head tilts around this point
+
+  // cat units -> screen cell (for whiskers and the speech bubble)
+  function catToScreen(cx, gy, s, P, x, y, inHead) {
+    if (inHead) {
+      const dx = x - NECK_X, dy = y - NECK_Y, c = Math.cos(P.headTilt), sn = Math.sin(P.headTilt);
+      x = NECK_X + dx * c - dy * sn; y = NECK_Y + dx * sn + dy * c + P.headBob;
+    }
+    y += P.bob;
+    x *= P.sqx; y *= P.sqy;
+    const cl = Math.cos(P.lean), sl = Math.sin(P.lean);
+    const X = x * cl - y * sl, Y = x * sl + y * cl;
+    return [cx + X * s * aspect, gy - (Y + P.hop) * s];
+  }
+
+  function drawCat(cx, gy, s, P) {
+    const sx = s * aspect, t = P.t;
+    const c0 = Math.max(0, Math.floor(cx - 2.3 * sx)), c1 = Math.min(cols, Math.ceil(cx + 2.4 * sx));
+    const r0 = Math.max(0, Math.floor(gy - (3.4 + P.hop) * s)), r1 = Math.min(rows, Math.ceil(gy + 0.3 * s));
     if (c0 >= c1 || r0 >= r1) return;
-    const bob = moving ? 0.05 * Math.abs(Math.sin(walk)) : 0.025 * Math.sin(t * 2.2);
-    const shapes = [];   // [test(X, Yb), colour] in painting order
-    const paint = (test, col) => shapes.push([test, col]);
+    const shapes = [];   // [test(X, Y), colour, layer] in painting order
+    let layer = 0;       // parts on a higher layer get an ink line where they overlap lower ones
+    const paint = (test, col) => shapes.push([test, col, layer]);
 
-    const leg = (lx, ph, shade, top) => {
-      const sw = moving ? Math.sin(walk + ph) : 0;
-      const lift = moving ? 0.12 * Math.max(0, Math.cos(walk + ph)) : 0;
-      const fx = lx + 0.2 * sw;
-      const limb = capsule(lx, 0.62, fx, 0.12 + lift, 0.13);
-      paint(limb, mul(CAL_WHITE, shade));
-      if (top) paint((X, Y) => Y > 0.36 && limb(X, Y), mul(top, shade));
-      paint(ellipse(fx + 0.05, 0.09 + lift, 0.17, 0.095), mul(CAL_WHITE, shade));
+    // body parts ride the bounce; the head also tilts around the neck and bobs a little later
+    const bob = P.bob;
+    const up = (f) => (X, Y) => f(X, Y - bob);
+    const hc = Math.cos(P.headTilt), hs = Math.sin(P.headTilt);
+    const head = (f) => (X, Y) => {
+      const dx = X - NECK_X, dy = Y - bob - P.headBob - NECK_Y;
+      return f(NECK_X + dx * hc + dy * hs, NECK_Y - dx * hs + dy * hc);
     };
-    leg(0.68, Math.PI, 0.75);
-    leg(-0.47, 0, 0.75, CAL_ORANGE);
+    const any = (...fs) => (X, Y) => fs.some((f) => f(X, Y));
 
-    // tail with orange and black bands
-    const wag = Math.sin(t * (moving ? 3 : 5)) * 0.3;
-    const pts = [];
-    for (let i = 0; i < 14; i++) { const u = i / 13; pts.push([-0.92 - 0.42 * u + wag * u * u, 0.98 + 1.15 * u - 0.15 * u ** 3]); }
-    for (let k = 0; k < 13; k++) {
-      const u = k / 13;
-      paint(capsule(pts[k][0], pts[k][1], pts[k + 1][0], pts[k + 1][1], 0.13 - 0.04 * u), Math.floor(k / 3) % 2 ? CAL_BLACK : CAL_ORANGE);
+    // legs: a diagonal trot, paws lifting in an arc
+    const leg = (hx, ph, shade, thigh) => {
+      const a = P.walk + ph;
+      const sw = P.moving ? Math.sin(a) : 0, lift = P.moving ? Math.max(0, Math.cos(a)) : 0;
+      const fx = hx + 0.17 * sw * P.stride, fy = 0.08 + 0.14 * lift * P.stride;
+      const limb = capsule(hx, 0.46 + bob, fx, fy, 0.11);
+      paint(limb, mul(CAL_WHITE, shade));
+      if (thigh) paint((X, Y) => Y > 0.3 + bob && limb(X, Y), mul(thigh, shade));
+      paint(ellipse(fx + 0.04, fy - 0.005, 0.14, 0.085), mul(CAL_WHITE, shade));
+    };
+    leg(0.36, Math.PI, 0.72);                     // far front
+    leg(-0.5, 0, 0.72, CAL_ORANGE);               // far back
+    layer = 1;
+
+    // tail: a striped S that sways in a travelling wave, fluffy tip
+    {
+      let tx = -0.66, ty = 0.68, prev = [tx, ty];
+      const N = 12, segL = 0.1;
+      for (let i = 0; i < N; i++) {
+        const u = i / (N - 1);
+        const ang = 2.25 - 0.9 * u - 1.3 * u * u * u + P.tailWag * 0.38 * u * Math.sin(t * P.tailSpeed - u * 3.2);
+        tx += Math.cos(ang) * segL; ty += Math.sin(ang) * segL;
+        const band = u < 0.34 ? CAL_ORANGE : u < 0.58 ? CAL_BLACK : u < 0.8 ? CAL_ORANGE : CAL_BLACK;
+        paint(up(capsule(prev[0], prev[1], tx, ty, 0.095 - 0.012 * u)), band);
+        prev = [tx, ty];
+      }
+      paint(up(ellipse(tx, ty, 0.11, 0.1)), CAL_BLACK);
     }
 
-    // body with calico patches
-    const body = ellipse(0, 0.95, 1.02, 0.53);
+    // body: a little bean with calico patches and a white chest
+    layer = 2;
+    const body = up(any(ellipse(-0.1, 0.68, 0.7, 0.38), ellipse(0.32, 0.74, 0.34, 0.34)));
     paint(body, CAL_WHITE);
-    paint(both(body, ellipse(-0.52, 1.12, 0.5, 0.36)), CAL_ORANGE);
-    paint(both(body, ellipse(0.18, 1.24, 0.38, 0.22)), CAL_BLACK);
-    paint(both(body, ellipse(0.62, 1.08, 0.2, 0.16)), CAL_ORANGE);
-    leg(0.55, 0, 1);
-    leg(-0.6, Math.PI, 1, CAL_ORANGE);
+    const pa = up(ellipse(-0.42, 0.86, 0.42, 0.28)), pb = up(ellipse(0.0, 1.0, 0.26, 0.15)), pc = up(ellipse(-0.74, 0.62, 0.16, 0.2));
+    paint((X, Y) => body(X, Y) && pa(X, Y), CAL_ORANGE);
+    paint((X, Y) => body(X, Y) && pb(X, Y), CAL_BLACK);
+    paint((X, Y) => body(X, Y) && pc(X, Y), CAL_BLACK);
+    layer = 3;
+    leg(-0.62, Math.PI, 1, CAL_ORANGE);           // near back
+    if (P.wave <= 0.02) leg(0.26, 0, 1);          // near front (unless it's waving)
+    layer = 4;
 
-    // head: one orange ear, one black ear, green eyes
-    paint(triangle([0.4, 1.95], [0.5, 2.64], [0.9, 2.2]), CAL_ORANGE);
-    paint(triangle([1.1, 2.2], [1.5, 2.64], [1.6, 1.95]), CAL_BLACK);
-    paint(triangle([0.51, 2.04], [0.56, 2.46], [0.81, 2.18]), PINK);
-    paint(triangle([1.19, 2.18], [1.44, 2.46], [1.49, 2.04]), PINK);
-    const head = ellipse(1.0, 1.62, 0.74, 0.64);
-    paint(head, CAL_WHITE);
-    paint(both(head, ellipse(0.52, 1.98, 0.42, 0.3)), CAL_ORANGE);
-    paint(both(head, ellipse(1.47, 2.03, 0.36, 0.25)), CAL_BLACK);
-    paint(ellipse(0.56, 1.45, 0.12, 0.075), PINK);
-    paint(ellipse(1.44, 1.45, 0.12, 0.075), PINK);
-    const blink = (t % 3.4) < 0.14;
-    for (const ex of [0.74, 1.26]) {
-      if (blink) paint(capsule(ex - 0.1, 1.66, ex + 0.1, 1.66, 0.035), EYE);
-      else {
-        paint(ellipse(ex, 1.66, 0.12, 0.165), EYE_GREEN);
-        paint(ellipse(ex, 1.65, 0.07, 0.12), EYE);
-        paint(ellipse(ex + 0.035, 1.72, 0.045, 0.05), WHITE);
-      }
+    // head
+    const twitch = P.earTwitch * 0.3;
+    const earR = (f) => (X, Y) => {               // the black ear flicks around its base
+      const px = 1.14, py = 1.86, c = Math.cos(twitch), sn = Math.sin(twitch), dx = X - px, dy = Y - py;
+      return f(px + dx * c + dy * sn, py - dx * sn + dy * c);
+    };
+    paint(head(triangle([0.2, 1.74], [0.29, 2.33], [0.68, 1.96])), CAL_ORANGE);
+    paint(head(earR(triangle([0.9, 1.96], [1.27, 2.33], [1.37, 1.74]))), CAL_BLACK);
+    paint(head(triangle([0.3, 1.82], [0.34, 2.18], [0.58, 1.97])), PINK);
+    paint(head(earR(triangle([1.0, 1.97], [1.23, 2.18], [1.27, 1.82]))), PINK);
+    const skull = any(ellipse(0.78, 1.45, 0.66, 0.53), ellipse(0.3, 1.24, 0.25, 0.18), ellipse(1.26, 1.24, 0.25, 0.18));
+    paint(head(skull), CAL_WHITE);
+    const ho = ellipse(0.34, 1.76, 0.42, 0.32), hb = ellipse(1.22, 1.82, 0.32, 0.22);
+    paint(head((X, Y) => skull(X, Y) && ho(X, Y)), CAL_ORANGE);
+    paint(head((X, Y) => skull(X, Y) && hb(X, Y)), CAL_BLACK);
+    paint(head(ellipse(0.36, 1.26, 0.12, 0.065)), PINK);      // blush
+    paint(head(ellipse(1.2, 1.26, 0.12, 0.065)), PINK);
+    paint(head(triangle([0.71, 1.33], [0.85, 1.33], [0.78, 1.26])), PINK);   // nose
+    if (P.mouth > 0) {
+      paint(head(ellipse(0.78, 1.14, 0.1, 0.06 + 0.05 * P.mouth)), MOUTH);
+      paint(head(ellipse(0.78, 1.09, 0.06, 0.03)), PINK);                    // tongue
     }
-    paint(triangle([0.93, 1.51], [1.07, 1.51], [1.0, 1.43]), PINK);
-    if (mouthOpen) paint(ellipse(1.0, 1.32, 0.08, 0.07), MOUTH);
 
-    // rasterise the shapes into the bounding box
+    // the waving paw (in front of everything)
+    layer = 5;
+    if (P.wave > 0.02) {
+      const ang = -1.45 + P.wave * (1.75 + 0.36 * Math.sin(P.wavePh));   // up and out in front, waving
+      const sxp = 0.45, syp = 0.66 + bob;
+      const px = sxp + 1.1 * Math.cos(ang), py = syp + 1.1 * Math.sin(ang);
+      paint(capsule(sxp, syp, px, py, 0.105), CAL_WHITE);
+      paint(ellipse(px, py, 0.13, 0.12), CAL_WHITE);
+      paint(ellipse(px + 0.02 * Math.cos(ang), py + 0.06, 0.05, 0.035), PINK);  // toe bean
+    }
+
+    // rasterise: each cell -> cat units (undo hop, lean and squash), last shape wins
+    const cl = Math.cos(P.lean), sl = Math.sin(P.lean);
     const W = c1 - c0, H = r1 - r0;
-    const colA = new Array(W * H).fill(null), brA = new Float32Array(W * H);
+    const colA = new Array(W * H).fill(null), brA = new Float32Array(W * H), layA = new Int8Array(W * H).fill(-1);
     for (let r = 0; r < H; r++) {
-      const Y = (gy - (r0 + r + 0.5)) / s - hop, Yb = Y - bob;
+      const Ys = (gy - (r0 + r + 0.5)) / s - P.hop;
       for (let c = 0; c < W; c++) {
-        const X = (c0 + c + 0.5 - cx) / sx;
-        let col = null;
-        for (let q = 0; q < shapes.length; q++) if (shapes[q][0](X, Yb)) col = shapes[q][1];
-        colA[r * W + c] = col;
-        brA[r * W + c] = clamp(0.72 + 0.28 * (Y - 0.2) / 2.2, 0.6, 1);
+        const Xs = (c0 + c + 0.5 - cx) / sx;
+        const X = (Xs * cl + Ys * sl) / P.sqx, Y = (-Xs * sl + Ys * cl) / P.sqy;
+        let col = null, lay = -1;
+        for (let q = 0; q < shapes.length; q++) if (shapes[q][0](X, Y)) { col = shapes[q][1]; lay = shapes[q][2]; }
+        colA[r * W + c] = col; layA[r * W + c] = lay;
+        brA[r * W + c] = clamp(0.74 + 0.26 * (Y - 0.2) / 2.0, 0.62, 1);
       }
     }
-    const filled = (r, c) => r >= 0 && r < H && c >= 0 && c < W && colA[r * W + c] !== null;
+    // "solid" neighbour: filled and not on a lower layer (else this cell gets an ink line)
+    const solid = (r, c, lay) => r >= 0 && r < H && c >= 0 && c < W && layA[r * W + c] >= lay;
     for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
       const col = colA[r * W + c];
       if (!col) continue;
-      const edge = !(filled(r - 1, c) && filled(r + 1, c) && filled(r, c - 1) && filled(r, c + 1))
+      const lay = layA[r * W + c];
+      const edge = !(solid(r - 1, c, lay) && solid(r + 1, c, lay) && solid(r, c - 1, lay) && solid(r, c + 1, lay))
         || r === 0 || c === 0 || r === H - 1 || c === W - 1;
       const br = brA[r * W + c];
       const ri = edge ? 6 : clamp(Math.round(5 + br * 3), 0, RAMP.length - 1);
@@ -569,14 +624,78 @@
       setCell((r0 + r) * cols + c0 + c, RAMP_IDX[ri], col[0] * m, col[1] * m, col[2] * m);
     }
 
-    // whiskers
-    const dash = charIndex("-");
-    for (const [x0, x1, y] of [[0.27, 0.02, 1.47], [0.29, 0.05, 1.37], [1.73, 1.98, 1.47], [1.71, 1.95, 1.37]]) {
-      const n = Math.floor(Math.abs(x1 - x0) * sx) + 1;
+    // eyes, laid out cell by cell (sized to the cat) so they stay crisp:
+    // open = big and dark with a white shine and a green glint, happy = ^, blink = a line
+    const ink = (c, r, col) => {
+      if (r >= 0 && r < rows && c >= 0 && c < cols) setCell(r * cols + c, RAMP_IDX[RAMP.length - 1], col[0], col[1], col[2]);
+    };
+    const DARK = [40, 28, 36], GLINT = [80, 165, 80];
+    const ew = Math.max(2, Math.round(0.26 * sx)), eh = Math.max(2, Math.round(0.36 * s));
+    for (const ex of [0.52, 1.04]) {
+      const [ec, er] = catToScreen(cx, gy, s, P, ex, 1.45, true);
+      const cL = Math.round(ec - ew / 2), rT = Math.round(er - eh / 2);
+      if (P.happy) {                                   // ^
+        const hh = Math.max(2, eh), half = (ew - 1) / 2;
+        for (let i = 0; i < ew; i++) ink(cL + i, rT + Math.round(Math.abs(i - half) / Math.max(half, 0.5) * (hh - 1)), DARK);
+      } else if (P.blink) {
+        for (let i = 0; i < ew; i++) ink(cL + i, rT + (eh >> 1), DARK);
+      } else {
+        const round = ew >= 4 && eh >= 3;
+        for (let j = 0; j < eh; j++) for (let i = 0; i < ew; i++) {
+          if (round && (j === 0 || j === eh - 1) && (i === 0 || i === ew - 1)) continue;   // rounded corners
+          ink(cL + i, rT + j, DARK);
+        }
+        ink(cL + ew - 2, rT + (eh >= 4 ? 1 : 0), WHITE);                         // one-cell shine, top right
+        if (ew >= 6) ink(cL + ew - 3, rT + (eh >= 4 ? 1 : 0), WHITE);
+        if (eh >= 3) ink(cL + Math.floor((ew - 1) / 2), rT + eh - 1, GLINT);        // green glint, bottom middle
+      }
+    }
+
+    // whiskers (they twitch now and then)
+    const dash = charIndex("-"), wz = 0.03 * Math.sin(t * 9) * (P.earTwitch > 0.1 ? 1 : 0);
+    for (const [x0, y0, x1, y1] of [[0.28, 1.3, 0.0, 1.34 + wz], [0.28, 1.22, 0.02, 1.15 - wz],
+                                    [1.28, 1.3, 1.58, 1.34 + wz], [1.28, 1.22, 1.56, 1.15 - wz]]) {
+      const [ac, ar] = catToScreen(cx, gy, s, P, x0, y0, true), [bc, br] = catToScreen(cx, gy, s, P, x1, y1, true);
+      const n = Math.max(1, Math.round(Math.abs(bc - ac)));
       for (let k = 0; k <= n; k++) {
-        const xx = x0 + (x1 - x0) * k / Math.max(n, 1);
-        const c = Math.floor(cx + xx * sx), r = Math.floor(gy - (y + bob + hop) * s);
-        if (r >= 0 && r < rows && c >= 0 && c < cols) setCell(r * cols + c, dash, 250, 240, 230);
+        const c = Math.floor(ac + (bc - ac) * k / n), r = Math.floor(ar + (br - ar) * k / n);
+        if (r >= 0 && r < rows && c >= 0 && c < cols && !IDX[r * cols + c]) setCell(r * cols + c, dash, 250, 240, 230);
+      }
+    }
+  }
+
+  // little dust puffs where the cat skids to a stop or pushes off
+  function drawDust(cx, gy, s, age, dir) {
+    if (age < 0 || age > 0.7) return;
+    const sx = s * aspect, fade = 1 - age / 0.7;
+    const chars = [charIndex("."), charIndex("o"), charIndex("O")];
+    for (let k = 0; k < 5; k++) {
+      const spread = 0.35 + 0.25 * k;
+      const x = cx + dir * (0.5 + spread * (0.6 + age * 1.6)) * sx;
+      const y = gy - (0.08 + age * (0.5 + 0.12 * k)) * s;
+      const big = age < 0.25 ? 2 : age < 0.45 ? 1 : 0;
+      const c = Math.floor(x), r = Math.floor(y);
+      if (r >= 0 && r < rows && c >= 0 && c < cols) {
+        const v = 215 * fade;
+        setCell(r * cols + c, chars[Math.max(0, big - (k % 2))], v, v * 0.95, v * 0.9);
+      }
+    }
+  }
+
+  // cartoon speed lines behind the running cat
+  function drawSpeedLines(cx, gy, s, speed, t) {
+    const k = clamp((speed - 2.5) / 3, 0, 1);
+    if (k <= 0) return;
+    const sx = s * aspect, dash = charIndex("-"), eq = charIndex("=");
+    for (let i = 0; i < 4; i++) {
+      const r = Math.floor(gy - (0.45 + 0.5 * i) * s);
+      const len = Math.round(sx * k * (1.2 + 0.6 * Math.sin(i * 2.1 + t * 7)));
+      const startC = Math.floor(cx - (1.2 + 0.25 * (i % 2)) * sx);
+      for (let j = 0; j < len; j++) {
+        const c = startC - j;
+        if (r < 0 || r >= rows || c < 0 || c >= cols) continue;
+        const f = (1 - j / len) * k * 230;
+        setCell(r * cols + c, j < len * 0.3 ? eq : dash, f, f, f * 1.05);
       }
     }
   }
@@ -704,28 +823,86 @@
     return 1 + (c + 1) * (u - 1) ** 3 + c * (u - 1) ** 2;
   }
 
+  // where the cat is at time t: trot in, skid to a stop, stand and talk, wind up, zoom off
+  const BRAKE_AT = 3.2, STOP_AT = 3.6, LEAVE_WINDUP = 0.35;
+  function catX(t, start, mid, end) {
+    const d = mid - start;
+    if (t < BRAKE_AT) return start + d * 0.94 * Math.max(0, t) / BRAKE_AT;
+    if (t < STOP_AT) { const u = (t - BRAKE_AT) / (STOP_AT - BRAKE_AT); return start + d * (0.94 + 0.06 * (1 - (1 - u) ** 2)); }
+    const te = t - WALK_IN - TALK - LEAVE_WINDUP;
+    if (te <= 0) return mid;
+    return mid + (end - mid) * Math.pow(Math.min(1, te / (WALK_OUT - LEAVE_WINDUP)), 1.7);
+  }
+
+  // a damped wobble: 0 -> peak -> settles
+  const wobble = (q, freq, damp) => (q < 0 ? 0 : Math.exp(-damp * q) * Math.sin(freq * q));
+
   function drawIntro(t) {
-    const s = rows * 0.28 / 2.7, sx = s * aspect, gy = rows * 0.8;
-    const start = -2.3 * sx, mid = cols * 0.5 - 0.15 * sx, end = cols + 2.3 * sx;
-    let x, moving, hop = 0, mouth = false, bubble = 0;
-    if (t < WALK_IN) {                       // walk in, slowing down at the middle
-      const u = t / WALK_IN;
-      x = start + (mid - start) * (1 - (1 - u) ** 2);
-      moving = u < 0.97;
-    } else if (t < WALK_IN + TALK) {         // stop, hop and say the name
-      x = mid; moving = false;
-      const tt = t - WALK_IN;
-      if (tt > 0.15 && tt < 0.55) hop = 0.3 * Math.sin(Math.PI * (tt - 0.15) / 0.4);
-      mouth = tt > 0.3 && tt < 1.3 && Math.sin(tt * 16) > 0;
-      bubble = pop((tt - 0.3) / 0.35) * (1 - smoothstep((tt - (TALK - 0.35)) / 0.3));
-    } else {                                 // walk out to the right
-      const u = (t - WALK_IN - TALK) / WALK_OUT;
-      x = mid + (end - mid) * u * u;
-      moving = true;
-    }
+    const s = rows * 0.235 / 2.6, sx = s * aspect, gy = rows * 0.78;   // ~85% of the old cat
+    const start = -2.4 * sx, mid = cols * 0.5 - 0.3 * sx, end = cols + 2.6 * sx;
+    const x = catX(t, start, mid, end);
+    const speed = Math.abs(x - catX(t - 0.04, start, mid, end)) / 0.04 / sx;   // cat units per second
+    const moving = speed > 0.05;
     const walk = (x - start) / sx * 3.4;
-    drawCat(x, gy, s, t, walk, moving, hop, mouth);
-    drawBubble(x + 1.3 * sx, gy - (2.45 + 0.3 + hop) * s, bubble);
+    const breathe = 0.014 * Math.sin(t * 3.2);
+    const P = {
+      t, walk, moving, stride: 1, hop: 0, sqx: 1 - breathe, sqy: 1 + breathe, lean: 0,
+      headTilt: 0, headBob: 0, bob: 0, mouth: 0, happy: false, blink: (t % 3.1) < 0.12,
+      wave: 0, wavePh: 0, earTwitch: Math.max(0, Math.sin(((t % 2.7) / 0.25) * Math.PI)) * ((t % 2.7) < 0.25 ? 1 : 0),
+      tailWag: 1, tailSpeed: 4,
+    };
+    if (moving) {                                     // bouncy trot with squash and stretch
+      const st = Math.abs(Math.sin(walk)), k = Math.min(1.6, 0.75 + speed * 0.14);
+      P.bob = 0.1 * k * st;
+      P.sqy = 1 + 0.07 * k * (st - 0.5); P.sqx = 1 / P.sqy;
+      P.lean = -0.05 * k;                             // leaning into the run
+      P.headBob = 0.045 * Math.sin(2 * walk - 0.9);   // the head follows a beat later
+      P.headTilt = 0.06 * Math.sin(walk);
+      P.stride = Math.min(1.4, 0.85 + speed * 0.1);
+      P.tailSpeed = 5 + speed;
+    }
+    const stopAge = t - BRAKE_AT;                     // skid: leans back, wobbles, settles
+    if (stopAge > 0 && t < WALK_IN) {
+      P.lean += 0.2 * wobble(stopAge, 7.5, 3.2);
+      const sq = 0.08 * wobble(t - STOP_AT, 14, 6);
+      P.sqy -= sq; P.sqx += sq * 0.6;
+    }
+
+    let bubble = 0;
+    const tt = t - WALK_IN;
+    if (tt >= 0 && tt < TALK) {                       // crouch, hop, say the name, wave
+      if (tt < 0.18) {
+        const c = Math.sin(Math.PI / 2 * tt / 0.18);
+        P.sqy = 1 - 0.14 * c; P.sqx = 1 + 0.09 * c;
+      } else if (tt < 0.6) {
+        const p = (tt - 0.18) / 0.42;
+        P.hop = 0.5 * Math.sin(Math.PI * p);
+        P.sqy = 1 + 0.12 * Math.abs(Math.cos(Math.PI * p)); P.sqx = 1 / P.sqy;
+      } else {
+        const sq = 0.13 * wobble(tt - 0.6, 15, 6);
+        P.sqy -= sq; P.sqx += sq * 0.6;
+      }
+      P.mouth = tt > 0.35 && tt < 1.35 ? (Math.sin(tt * 15) > -0.2 ? 1 : 0.3) : 0;
+      P.happy = tt > 1.35 && tt < 2.5;
+      P.wave = smoothstep((tt - 1.0) / 0.22) * (1 - smoothstep((tt - 2.4) / 0.22));
+      P.wavePh = tt * 12;
+      P.headTilt = -0.17 * smoothstep((tt - 0.9) / 0.35) * (1 - smoothstep((tt - 2.5) / 0.35));
+      P.tailSpeed = 8;
+      if (tt > 1.9 && tt < 2.15) P.earTwitch = Math.sin((tt - 1.9) / 0.25 * Math.PI);
+      bubble = pop((tt - 0.35) / 0.35) * (1 - smoothstep((tt - (TALK - 0.35)) / 0.3));
+    }
+    const te = t - WALK_IN - TALK;
+    if (te >= 0 && te < LEAVE_WINDUP) {               // wind-up before zooming off
+      const c = smoothstep(te / 0.3);
+      P.sqy = 1 - 0.12 * c; P.sqx = 1 + 0.08 * c; P.lean = 0.14 * c;
+    }
+
+    drawCat(x, gy, s, P);
+    drawDust(x - 0.1 * sx, gy, s, t - STOP_AT + 0.15, 1);                    // skid puff in front
+    drawDust(x - 0.4 * sx, gy, s, te - LEAVE_WINDUP, -1);                     // push-off puff behind
+    if (te > LEAVE_WINDUP) drawSpeedLines(x, gy, s, speed, t);
+    const [bc, br] = catToScreen(x, gy, s, P, 1.2, 2.4, true);
+    drawBubble(bc, br, bubble);
   }
 
   // ================================================================ display
