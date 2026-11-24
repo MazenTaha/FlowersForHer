@@ -51,17 +51,21 @@ regrows the bouquet from the start (without replaying the cat).
 ### Music
 
 "Heartbeat" (Joe Hisaishi, *Howl's Moving Castle*) plays from YouTube
-(https://youtu.be/WOD_R7Yu8vw) through YouTube's own player, a small window in the
-bottom-left corner (YouTube doesn't allow hidden players). It fades in when the first
-lily starts to open, loops while the bouquet stays, and starts again with **Re-bloom**.
+(https://youtu.be/WOD_R7Yu8vw) through YouTube's player, kept invisible (note: YouTube's
+API terms ask for a visible player of at least 200x200). It starts on the same frame
+as the flowers: the song is buffered (muted) while the cat walks, and the bouquet waits
+until YouTube is really playing (never more than 3 s). It loops while the bouquet stays,
+and starts again with **Re-bloom**.
 
 - Browsers only allow sound after a tap, so the page opens with a little
-  **"tap to open"** screen first. If a browser still blocks it (some iPhones),
-  a "tap here for music" hint appears over the player; one tap on the video starts it.
+  **"tap to open"** screen first. If a browser still blocks it (some iPhones), the
+  player appears in the top-left corner with a "tap here for music" hint; one tap on
+  the video starts the song and the player hides again.
 - The top-right button mutes/unmutes; the slider next to it sets the volume (it shows
   on hover on a computer and is always visible on phones; iPhones only get mute, since
   their volume is the side buttons). The setting is remembered on that device.
-- `?yt=VIDEO_ID` plays a different YouTube video; `?music=0` turns the music off.
+- `?yt=VIDEO_ID` plays a different YouTube video, `?ytstart=1.5` skips the first 1.5 s of
+  it, and `?music=0` turns the music off.
 
 Keys: Space = pause, R = restart.
 

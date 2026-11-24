@@ -165,11 +165,12 @@
     #volume:focus { outline: none; }
     #volume:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
 
-    /* the YouTube player that plays the song (YouTube needs it visible, at least 200x200) */
+    /* the YouTube player that plays the song: invisible. It only appears (top left) if a
+       browser blocks the sound and wants a tap on the video itself. */
     #yt {
       position: fixed;
       left: calc(14px + env(safe-area-inset-left));
-      bottom: calc(14px + env(safe-area-inset-bottom));
+      top: calc(14px + env(safe-area-inset-top));
       width: 200px;
       height: 200px;
       border: 2px solid #ff9ec7;
@@ -178,15 +179,15 @@
       box-shadow: 0 0 16px rgba(255, 120, 180, 0.4);
       opacity: 0;
       pointer-events: none;
-      transform: translateY(8px);
+      transform: translateY(-8px);
       transition: opacity 0.8s ease, transform 0.8s ease;
     }
     #yt[hidden] { display: none; }
-    #yt.show { opacity: 1; pointer-events: auto; transform: none; }
+    #yt.blocked { opacity: 1; pointer-events: auto; transform: none; }
     #yt iframe { display: block; width: 100%; height: 100%; border: 0; border-radius: 12px; }
     #yt .tap {
       position: absolute;
-      left: 0; right: 0; bottom: calc(100% + 8px);
+      left: 0; right: 0; top: calc(100% + 8px);
       padding: 7px 4px;
       border-radius: 999px;
       background: #ff5fa2;
@@ -195,18 +196,9 @@
       font: 700 14px/1.2 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
       text-align: center;
       pointer-events: none;           /* the tap goes through to the video */
-      display: none;
       animation: nudge 1.4s ease-in-out infinite;
     }
-    @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-    #yt.blocked .tap { display: block; }
-
-    /* phones: Re-bloom moves to the right so it never sits on the player */
-    @media (max-width: 560px) {
-      #rebloom { left: auto; right: calc(14px + env(safe-area-inset-right)); transform: translateY(12px); }
-      #rebloom.show { transform: none; }
-      #rebloom:active { transform: translateY(2px) scale(0.97); }
-    }
+    @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 
     noscript {
       color: #f9a8d4;

@@ -6,7 +6,7 @@
  * coloured ASCII characters on a <canvas>.
  *
  * URL options:  ?say=Asmaa!   ?message=For%20you   ?intro=0   ?tint=0.45   ?seed=7   ?music=0   ?yt=VIDEO_ID
- * Music: "Heartbeat" (YouTube player, bottom left) plays when the lilies start to bloom (volume: top right).
+ * Music: "Heartbeat" (invisible YouTube player) starts together with the flowers (volume: top right).
  * Keys: Space = pause, R = restart. The "Re-bloom" button regrows the flowers.
  */
 "use strict";
@@ -767,21 +767,25 @@
   }
 
   // ---------------------------------------------------------------- music
-  // "Heartbeat" plays through YouTube's own player, shown as a small window in the
-  // bottom-left corner (YouTube doesn't allow hidden players). It fades in when the first
-  // lily starts to open, loops while the bouquet stays and restarts with Re-bloom.
+  // "Heartbeat" plays through YouTube's player, kept invisible. It starts together with
+  // the flowers: the song is buffered (muted) while the cat walks, and the bouquet's first
+  // frame waits until YouTube really is playing, so sound and growth begin on the same
+  // frame. It loops while the bouquet stays and restarts with Re-bloom.
   // Browsers only allow sound after a tap, so the page first shows "tap to open"; if a
-  // browser still blocks it (some iPhones), a hint asks for one tap on the video.
+  // browser still blocks it (some iPhones), the player appears with a hint asking for one
+  // tap on it, and hides again as soon as the music plays.
   const MUSIC_ON = params.get("music") !== "0";
   const YT_ID = params.get("yt") || "WOD_R7Yu8vw";
-  const MUSIC_AT = 2.6;            // bouquet seconds: the first lily starts to open
-  const FADE_IN = 1.8, FADE_OUT = 0.5;
+  const YT_START = Math.max(0, parseFloat(params.get("ytstart") || "0") || 0);   // skip silence at the start
+  const FADE_IN = 0.15, FADE_OUT = 0.5;     // short fade-in: just enough to avoid a click
+  const MAX_HOLD = 3.0;                     // never wait longer than this for the music
   const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const music = {
     player: null, ready: false, failed: false,
     want: false,        // the bouquet wants music now
-    playing: false,     // YouTube says it's playing
+    playing: false,     // YouTube says it's playing (and it isn't the muted pre-buffer)
+    priming: false, primed: false, primeTimer: 0,
     fade: 0, sentVol: -1, sentMute: null, blockTimer: 0,
     volume: 0.7, muted: false, paused: false,
   };
@@ -814,16 +818,22 @@
             music.ready = true;
             music.sentVol = -1; music.sentMute = null;
             if (music.want && !music.paused) playFromStart();
+            else if (started) primeMusic();
           },
           onStateChange: (e) => {
-            if (e.data === YT.PlayerState.PLAYING) {
+            const S = YT.PlayerState;
+            if (e.data === S.PLAYING) {
+              if (music.priming) {
+                endPriming();
+                if (!music.want) return;             // buffered: wait silently for the flowers
+              }
               music.playing = true;
               clearTimeout(music.blockTimer);
               ytBox.classList.remove("blocked");
-            } else if (e.data === YT.PlayerState.ENDED) {
+            } else if (e.data === S.ENDED) {
               music.playing = false;
               if (music.want && !music.paused) playFromStart(true);   // loop
-            } else if (e.data === YT.PlayerState.PAUSED) {
+            } else if (e.data === S.PAUSED || e.data === S.BUFFERING) {
               music.playing = false;
             }
           },
@@ -837,12 +847,34 @@
     document.head.appendChild(s);
   }
 
+  // while the cat walks: play a moment muted so YouTube has the start buffered
+  function primeMusic() {
+    if (!music.ready || music.failed || music.primed || music.priming || music.want) return;
+    music.priming = true;
+    applyVolume();                       // mutes (see applyVolume)
+    music.player.seekTo(YT_START, true);
+    music.player.playVideo();
+    music.primeTimer = setTimeout(endPriming, 6000);   // blocked even muted: give up quietly
+  }
+  function endPriming() {
+    if (!music.priming) return;
+    clearTimeout(music.primeTimer);
+    music.priming = false;
+    music.primed = true;
+    if (!music.want) {
+      music.player.pauseVideo();
+      music.player.seekTo(YT_START, true);
+    }
+    applyVolume();
+  }
+
   function playFromStart(looping) {
     const p = music.player;
     if (!music.ready || music.failed) return;
     if (!looping) music.fade = 0;
+    music.playing = false;
     applyVolume();
-    p.seekTo(0, true);
+    p.seekTo(YT_START, true);
     p.playVideo();
     clearTimeout(music.blockTimer);
     music.blockTimer = setTimeout(() => {   // still silent? the browser wants a tap on the video
@@ -853,7 +885,11 @@
   function musicStart() {
     if (music.want || music.failed) return;
     music.want = true;
-    if (ytBox) ytBox.classList.add("show");
+    if (!music.paused) playFromStart();
+  }
+
+  function musicRestart() {              // Re-bloom: back to the start of the song
+    if (!music.want) { musicStart(); return; }
     if (!music.paused) playFromStart();
   }
 
@@ -862,6 +898,9 @@
     music.want = false;            // musicUpdate fades it out, then pauses
     clearTimeout(music.blockTimer);
     if (ytBox) ytBox.classList.remove("blocked");
+    if (music.fade === 0 && music.ready && !music.failed) {   // never got going: stop right away
+      music.player.pauseVideo();
+    }
   }
 
   function musicPause(pause) {
@@ -871,15 +910,22 @@
     else music.player.playVideo();
   }
 
+  // should the flowers wait for the song? (only at their very first frame)
+  function musicHolding() {
+    if (!MUSIC_ON || music.failed || music.paused) return false;
+    if (ytBox && ytBox.classList.contains("blocked")) return false;   // needs a tap: don't wait
+    return !music.playing;
+  }
+
   // every frame: fade in/out and send the volume to YouTube when it changes
   function musicUpdate(dt) {
     if (!music.ready || music.failed) return;
-    if (music.want) music.fade = Math.min(1, music.fade + dt / FADE_IN);
-    else if (music.fade > 0) {
+    if (music.want) {
+      if (music.playing) music.fade = Math.min(1, music.fade + dt / FADE_IN);
+    } else if (music.fade > 0) {
       music.fade = Math.max(0, music.fade - dt / FADE_OUT);
       if (music.fade === 0) {
         music.player.pauseVideo();
-        if (ytBox) ytBox.classList.remove("show");
       }
     }
     applyVolume();
@@ -895,9 +941,10 @@
     if (music.ready && !music.failed) {
       const vol = Math.round(100 * music.fade * music.volume * music.volume);   // squared: feels even
       if (vol !== music.sentVol) { music.player.setVolume(vol); music.sentVol = vol; }
-      if (silent !== music.sentMute) {             // iPhones ignore setVolume but obey mute
-        if (silent) music.player.mute(); else music.player.unMute();
-        music.sentMute = silent;
+      const mute = silent || music.priming;        // iPhones ignore setVolume but obey mute
+      if (mute !== music.sentMute) {
+        if (mute) music.player.mute(); else music.player.unMute();
+        music.sentMute = mute;
       }
     }
     if (!soundBox) return;
@@ -948,6 +995,8 @@
   // ---------------------------------------------------------------- loop
   const bouquet = makeBouquet(SEED);
   let t = 0, last = performance.now(), paused = false, started = false;
+  const B0 = INTRO ? INTRO_END : 0;      // time the bouquet starts
+  let held = 0;                          // seconds the first flower frame waited for the song
 
   function setPaused(p) {
     paused = p;
@@ -965,9 +1014,11 @@
     rebloomBtn.tabIndex = show ? 0 : -1;
   }
   function rebloom() {
-    t = INTRO ? INTRO_END : 0;
+    t = B0;
+    held = 0;
     setPaused(false);
     setButton(false);
+    musicRestart();
   }
   if (rebloomBtn) rebloomBtn.addEventListener("click", rebloom);
 
@@ -983,7 +1034,7 @@
       drawBouquet(bouquet, tb);
       drawMessage(tb);
       setButton(tb > BLOOMED_AT);
-      if (started) { if (tb >= MUSIC_AT) musicStart(); else musicStop(); }
+      if (started) musicStart();
     }
     compose();
   }
@@ -991,7 +1042,16 @@
   function tick(now) {
     const dt = Math.min(0.25, (now - last) / 1000);   // keeps real speed on slow phones, no jump after a tab switch
     last = now;
-    if (!paused) t += dt;
+    if (!paused) {
+      let nt = t + dt;
+      // the flowers' first frame waits for the song, so both start together
+      if (started && t <= B0 && nt >= B0) {
+        if (t < B0) { t = B0; renderFrame(t); }       // reach the first frame (starts the music)
+        if (musicHolding() && held < MAX_HOLD) { held += dt; nt = B0; }
+      }
+      if (nt < B0) held = 0;
+      t = nt;
+    }
     renderFrame(t);
     musicUpdate(dt);
     requestAnimationFrame(tick);
@@ -1007,7 +1067,7 @@
     if (e.code === "Space" && !(e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement)) {
       setPaused(!paused); e.preventDefault();
     }
-    if (e.key === "r" || e.key === "R") { t = 0; setPaused(false); }
+    if (e.key === "r" || e.key === "R") { t = 0; held = 0; setPaused(false); }
   });
 
   // debugging / screenshots: window.renderAt(seconds) draws one frame and pauses
@@ -1015,6 +1075,8 @@
   window.musicState = () => ({
     ready: music.ready, failed: music.failed, want: music.want, playing: music.playing,
     fade: +music.fade.toFixed(2), volume: music.sentVol, muted: music.sentMute,
+    priming: music.priming, primed: music.primed, held: +held.toFixed(2),
+    bouquetTime: +(t - B0).toFixed(2),
     youtube: music.ready ? music.player.getPlayerState() : null,
     at: music.ready ? +music.player.getCurrentTime().toFixed(1) : null,
   });
@@ -1041,6 +1103,7 @@
       setTimeout(() => { gate.hidden = true; }, 500);
       showSound();
       begin();
+      primeMusic();
     }, { once: true });
   });
 })();
