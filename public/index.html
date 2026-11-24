@@ -6,6 +6,10 @@
   <title>Flowers for her</title>
   <meta name="description" content="A little calico cat and a bouquet of ASCII lilies.">
   <meta name="theme-color" content="#000000">
+  <!-- the page is already dark: stop browser/extension "dark mode" from repainting it
+       (that turned the white papers brown) -->
+  <meta name="color-scheme" content="dark">
+  <meta name="darkreader-lock">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%8C%B8</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,6 +18,7 @@
   <link rel="preload" href="bouquet.webp" as="image">
   <link rel="stylesheet" href="folder.css">
   <style>
+    :root { color-scheme: dark; }
     html, body {
       margin: 0;
       height: 100%;

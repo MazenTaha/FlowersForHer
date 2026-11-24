@@ -91,7 +91,7 @@
       h(Folder, {
         items: view.order.map((content) => ({ content })),
         label: LABEL,
-        color: "#ff8fbf",
+        color: "#4a8cff",
         paperColor: "#fffaf3",
         layout: view.layout,
         size: view.size,
