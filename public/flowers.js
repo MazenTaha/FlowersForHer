@@ -1375,12 +1375,30 @@
     requestAnimationFrame(tick);
   }
 
+  const welcome = window.ffhWelcome || null;   // the folder screen, if it loaded
   loadYouTube();
   const fontReady = document.fonts && document.fonts.load
     ? Promise.race([document.fonts.load(`700 120px "Comic Neue"`), new Promise((r) => setTimeout(r, 2500))])
     : Promise.resolve();
   fontReady.catch(() => {}).then(() => {
     layout();
+    // the folder opening screen (welcome.js): tapping its "Flowers for her" paper opens the page
+    if (welcome) {
+      renderFrame(0);                    // the starry sky behind the folder
+      gateWaiting = true;
+      if (MUSIC_ON && !music.ready && !music.failed) {
+        gateLoading = true;              // the paper opens the page once YouTube has loaded
+        setTimeout(gateReady, 10000);    // YouTube very slow or blocked: open without music
+      }
+      welcome.connect(() => {
+        if (gateLoading || !gateWaiting) return null;
+        gateWaiting = false;
+        primeMusic();                    // right inside the tap: this is what unlocks iPhones
+        return () => { if (MUSIC_ON) showSound(); else hideSound(); begin(); };
+      });
+      welcome.setReady(!gateLoading);
+      return;
+    }
     const gate = document.getElementById("gate");
     if (!MUSIC_ON || !gate) { hideSound(); begin(); return; }
     renderFrame(0);                      // the starry sky behind "tap to open"
@@ -1398,6 +1416,7 @@
   function gateReady() {
     if (!gateLoading) return;
     gateLoading = false;
+    if (welcome) { welcome.setReady(true); return; }
     const gate = document.getElementById("gate");
     if (gate) gate.classList.remove("loading");
   }

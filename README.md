@@ -2,7 +2,13 @@
 
 An animated ASCII lily bouquet website.
 
-It starts with a cute cartoon calico cat trotting in from the left. It skids to
+It opens on a little pink folder labelled **"For Asmaa"**. Tap it and three papers come
+out: a polaroid preview of the bouquet captioned **"Flowers for her"**, and two
+**"Upcoming"** placeholder cards (skeleton picture and lines, a "soon" badge). Tapping that polaroid opens the page. (The folder is the React Bits
+`<Folder />` component, in `public/folder.js` + `folder.css`; React itself loads from a CDN.
+If React can't load, the page falls back to a plain "tap to open" screen.)
+
+Then it starts with a cute cartoon calico cat trotting in from the left. It skids to
 a stop in the middle, hops, says **"Asmaa!"** in a comic speech bubble and
 waves, then zooms off to the right. Once it's gone, the flowers start growing.
 
@@ -14,8 +20,9 @@ breathing, while pastel stars twinkle behind them.
 
 ## Website (Vercel)
 
-Everything lives in `public/` (`index.html` + `flowers.js`, plain JavaScript,
-no build step).
+Everything lives in `public/` (plain JavaScript, no build step): `index.html`,
+`flowers.js` (the animation and music), `welcome.js` + `folder.js` + `folder.css` (the
+opening folder) and `bouquet.webp` (the polaroid's picture, a frame of the bouquet).
 
 Try it locally with any static file server, for example:
 
@@ -43,6 +50,7 @@ Options go in the URL:
 | `seed`              | `?seed=3`                    | a different bouquet                 |
 | `music=0`           | `?music=0`                   | no music                            |
 | `yt`                | `?yt=WOD_R7Yu8vw`            | which YouTube video plays           |
+| `folder=0`          | `?folder=0`                  | skip the folder ("tap to open")     |
 
 Once the lilies have bloomed, a **Re-bloom** button appears at the bottom; it
 regrows the bouquet from the start (without replaying the cat).
@@ -56,9 +64,10 @@ as the flowers: the song is buffered (muted) while the cat walks, and the bouque
 until YouTube is really playing (never more than 3 s). It loops while the bouquet stays,
 and starts again with **Re-bloom**.
 
-- Browsers only allow sound after a tap, so the page opens with a little
-  **"tap to open"** screen first. The words appear once YouTube has loaded, and the
-  tap itself starts the player (silently, to buffer). iPhones only allow the song later
+- Browsers only allow sound after a tap, so the page only starts when the "Flowers for
+  her" polaroid in the folder is tapped (or the plain **"tap to open"** screen, without
+  the folder). That tap works once YouTube has loaded (until then the hint says "one
+  moment…"), and it starts the player (silently, to buffer). iPhones only allow the song later
   if the player was started during a tap, so this is what makes the first bloom play
   there too. The video itself never shows, and there is no other button to tap.
 - The top-right button mutes/unmutes; the slider next to it sets the volume (it shows

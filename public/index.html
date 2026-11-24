@@ -9,7 +9,10 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%8C%B8</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+  <link rel="preload" href="bouquet.webp" as="image">
+  <link rel="stylesheet" href="folder.css">
   <style>
     html, body {
       margin: 0;
@@ -94,6 +97,85 @@
       45% { transform: scale(1.08); }
     }
     @keyframes glow { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+
+    /* the opening screen: a folder with the papers inside */
+    #welcome {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 18px;
+      padding-bottom: calc(14vh + env(safe-area-inset-bottom));
+      box-sizing: border-box;
+      font-family: "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      transition: opacity 0.7s ease;
+    }
+    #welcome[hidden] { display: none; }
+    #welcome.gone { opacity: 0; pointer-events: none; }
+    #welcome .folder-tab-text { font-weight: 700; }
+    .welcome-hint {
+      min-height: 1.2em;
+      margin: 0;
+      color: #ffd1e6;
+      font: 700 20px/1.2 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 14px rgba(255, 120, 180, 0.8);
+      animation: glow 1.6s ease-in-out infinite;
+    }
+    .paper {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      font-family: "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      font-weight: 700;
+      color: #a8336a;
+    }
+    .polaroid { padding: 7% 7% 0; }
+    .polaroid img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: calc(2px * var(--folder-scale));
+      background: #000;
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+    .polaroid .caption {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(12.5px * var(--folder-scale));
+      white-space: nowrap;
+    }
+    /* "Upcoming" placeholder cards: skeleton blocks with a soft shimmer */
+    .upcoming { padding: 7% 7% 0; gap: calc(7px * var(--folder-scale)); }
+    .sk {
+      display: block;
+      border-radius: calc(3px * var(--folder-scale));
+      background: linear-gradient(100deg, #f3e4ea 35%, #fbf1f5 50%, #f3e4ea 65%) 0 0 / 300% 100%;
+      animation: shimmer 1.8s ease-in-out infinite;
+    }
+    .sk-pic { width: 100%; aspect-ratio: 1.15; margin-bottom: calc(2px * var(--folder-scale)); }
+    .sk-line { height: calc(5px * var(--folder-scale)); border-radius: 999px; }
+    .up-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+    .up-title { font-size: calc(11.5px * var(--folder-scale)); color: #b98ba0; }
+    .up-badge {
+      padding: calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale));
+      border-radius: 999px;
+      background: rgba(255, 111, 174, 0.14);
+      color: #e0609a;
+      font-size: calc(7.5px * var(--folder-scale));
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+    @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+    @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
 
     /* music: mute button + volume slider, top right */
     #sound {
@@ -213,7 +295,12 @@
     <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Music volume">
   </div>
   <div id="yt"><div id="yt-player"></div></div>
+  <div id="welcome" hidden></div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="folder.js"></script>
+  <script src="welcome.js"></script>
   <script src="flowers.js"></script>
 </body>
 </html>
