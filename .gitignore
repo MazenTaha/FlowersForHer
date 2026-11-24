@@ -1,0 +1,9 @@
+# big local builds / videos
+share/
+
+# local tooling
+.claude/
+.vercel/
+__pycache__/
+*.pyc
+flowers_*.png

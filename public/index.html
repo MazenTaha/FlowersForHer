@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Flowers for her</title>
+  <meta name="description" content="A little calico cat and a bouquet of ASCII lilies.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%8C%B8</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #000;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      display: block;
+      image-rendering: auto;
+    }
+    noscript {
+      color: #f9a8d4;
+      font: 16px/1.5 system-ui, sans-serif;
+      padding: 16px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
+  <noscript>This little bouquet needs JavaScript to bloom.</noscript>
+  <script src="flowers.js"></script>
+</body>
+</html>
