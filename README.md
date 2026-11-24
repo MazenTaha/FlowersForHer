@@ -43,6 +43,9 @@ Options go in the URL:
 | `tint`              | `?tint=0`                    | pure ASCII on black                 |
 | `seed`              | `?seed=3`                    | a different bouquet                 |
 
+Once the lilies have bloomed, a **Re-bloom** button appears at the bottom; it
+regrows the bouquet from the start (without replaying the cat).
+
 Keys: Space = pause, R = restart.
 
 ## Run (Python)

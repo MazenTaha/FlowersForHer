@@ -27,6 +27,40 @@
       display: block;
       image-rendering: auto;
     }
+    #rebloom {
+      position: fixed;
+      left: 50%;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      transform: translate(-50%, 12px);
+      padding: 10px 26px;
+      border: 2px solid #ff9ec7;
+      border-radius: 999px;
+      background: rgba(255, 105, 170, 0.22);
+      color: #fff0f6;
+      font: 700 18px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 18px rgba(255, 120, 180, 0.45);
+      backdrop-filter: blur(3px);
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.6s ease, transform 0.6s ease, visibility 0s linear 0.6s,
+                  background-color 0.2s ease, box-shadow 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #rebloom.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translate(-50%, 0);
+      transition: opacity 0.6s ease, transform 0.6s ease, visibility 0s,
+                  background-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    #rebloom:hover {
+      background: rgba(255, 105, 170, 0.4);
+      box-shadow: 0 0 26px rgba(255, 120, 180, 0.7);
+    }
+    #rebloom:active { transform: translate(-50%, 2px) scale(0.97); }
+    #rebloom:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
     noscript {
       color: #f9a8d4;
       font: 16px/1.5 system-ui, sans-serif;
@@ -37,6 +71,7 @@
 </head>
 <body>
   <canvas id="c" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
+  <button id="rebloom" type="button">Re-bloom</button>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
   <script src="flowers.js"></script>
 </body>

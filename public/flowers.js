@@ -6,7 +6,7 @@
  * coloured ASCII characters on a <canvas>.
  *
  * URL options:  ?say=Asmaa!   ?message=For%20you   ?intro=0   ?tint=0.45   ?seed=7
- * Keys: Space = pause, R = restart.
+ * Keys: Space = pause, R = restart. The "Re-bloom" button regrows the flowers.
  */
 "use strict";
 
@@ -769,14 +769,34 @@
   const bouquet = makeBouquet(SEED);
   let t = 0, last = performance.now(), paused = false;
 
+  // "Re-bloom" button: shows once the lilies are open, regrows the bouquet (no cat replay)
+  const rebloomBtn = document.getElementById("rebloom");
+  const BLOOMED_AT = 9.5;          // bouquet seconds until (nearly) every lily is open
+  let buttonShown = false;
+  function setButton(show) {
+    if (!rebloomBtn || show === buttonShown) return;
+    buttonShown = show;
+    rebloomBtn.classList.toggle("show", show);
+    rebloomBtn.tabIndex = show ? 0 : -1;
+  }
+  function rebloom() {
+    t = INTRO ? INTRO_END : 0;
+    paused = false;
+    setButton(false);
+  }
+  if (rebloomBtn) rebloomBtn.addEventListener("click", rebloom);
+
   function renderFrame(time) {
     IDX.fill(0); RGB.fill(0);
     drawStars(time);
-    if (INTRO && time < INTRO_END) drawIntro(time);
-    else {
+    if (INTRO && time < INTRO_END) {
+      drawIntro(time);
+      setButton(false);
+    } else {
       const tb = INTRO ? time - INTRO_END : time;
       drawBouquet(bouquet, tb);
       drawMessage(tb);
+      setButton(tb > BLOOMED_AT);
     }
     compose();
   }
