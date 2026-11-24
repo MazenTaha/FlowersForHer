@@ -772,8 +772,9 @@
   // frame waits until YouTube really is playing, so sound and growth begin on the same
   // frame. It loops while the bouquet stays and restarts with Re-bloom.
   // Browsers only allow sound after a tap, so the page first shows "tap to open"; if a
-  // browser still blocks it (some iPhones), the player appears with a hint asking for one
-  // tap on it, and hides again as soon as the music plays.
+  // browser still blocks it (some iPhones), a "tap for music" pill appears; the tap lands
+  // on the invisible player under it, and the pill goes away once the music plays.
+  // The YouTube video itself is never shown.
   const MUSIC_ON = params.get("music") !== "0";
   const YT_ID = params.get("yt") || "WOD_R7Yu8vw";
   const YT_START = Math.max(0, parseFloat(params.get("ytstart") || "0") || 0);   // skip silence at the start
