@@ -140,14 +140,21 @@
       border-radius: 2px;
       background: linear-gradient(to right, #ff9ec7 var(--v, 70%), rgba(255, 255, 255, 0.25) var(--v, 70%));
       opacity: 0;
+      visibility: hidden;            /* collapsed: the knob must not peek out either */
       cursor: pointer;
-      transition: width 0.25s ease, margin 0.25s ease, opacity 0.25s ease;
+      transition: width 0.25s ease, margin 0.25s ease, opacity 0.25s ease, visibility 0s linear 0.25s;
     }
-    #sound:hover #volume, #sound:focus-within #volume { width: 84px; margin: 0 10px 0 4px; opacity: 1; }
+    #sound:hover #volume, #sound:focus-within #volume {
+      width: 84px; margin: 0 10px 0 4px; opacity: 1; visibility: visible;
+      transition: width 0.25s ease, margin 0.25s ease, opacity 0.25s ease, visibility 0s;
+    }
     @media (hover: none) {           /* phones: no hover, so the slider is always there */
-      #volume { width: 72px; margin: 0 10px 0 4px; opacity: 1; }
+      #volume { width: 72px; margin: 0 10px 0 4px; opacity: 1; visibility: visible; }
     }
-    #sound.muted #volume { filter: grayscale(1); opacity: 0.5; }
+    /* muted: dim the slider, but only while it's open */
+    #sound.muted #volume { filter: grayscale(1); }
+    #sound.muted:hover #volume, #sound.muted:focus-within #volume { opacity: 0.5; }
+    @media (hover: none) { #sound.muted #volume { opacity: 0.5; } }
     #sound.no-slider #volume { display: none; }
     #volume::-webkit-slider-thumb {
       -webkit-appearance: none;
