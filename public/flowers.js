@@ -30,6 +30,7 @@
     return i;
   };
   const RAMP_IDX = Array.from(RAMP, charIndex);
+  Array.from("-=.oO" + MESSAGE, charIndex);   // dust, speed lines, message: known before the first frame
   const STAR_IDX = Array.from(STAR_CHARS, charIndex);
   for (const ch of SAY + MESSAGE + "-#@") charIndex(ch);
 
@@ -63,6 +64,10 @@
 
   // ================================================================ bouquet
   const NU = 36, NV = 13, NT = 120, NA = 6, NS = 60, NVL = 9;
+  const STEM_COS = Float64Array.from({ length: NA }, (_, a) => Math.cos(a * TAU / NA));
+  const STEM_SIN = Float64Array.from({ length: NA }, (_, a) => Math.sin(a * TAU / NA));
+  const STAMEN_OFF = [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+                      [1, 1, 0], [-1, -1, 0], [1, -1, 0], [-1, 1, 0]];
 
   function makeBouquet(seed) {
     const rnd = mulberry32(seed * 9973 + 1);
@@ -197,26 +202,30 @@
       const P0 = B.stemBase[f];
       const P2 = [P3[0] - ax[0] * 0.3, P3[1] - ax[1] * 0.3 - 0.7, P3[2] - ax[2] * 0.3];
       const P1 = [0.08 * P3[0] + P0[0] * 0.5, 0.95, 0.08 * P3[2] + P0[2] * 0.5];
-      let head = P0;
-      const Bp = [0, 0, 0], D0 = [0, 0, 0];
+      // plain numbers instead of little arrays: this loop runs ~1500 times a frame
+      let bx = P0[0], by = P0[1], bz = P0[2];
+      const sc = B.stemCol[f];
       for (let j = 0; j < NT; j++) {
         const T = j / (NT - 1) * g, s1 = 1 - T;
         const w0 = s1 * s1 * s1, w1 = 3 * s1 * s1 * T, w2 = 3 * s1 * T * T, w3 = T * T * T;
-        for (let q = 0; q < 3; q++) {
-          Bp[q] = w0 * P0[q] + w1 * P1[q] + w2 * P2[q] + w3 * P3[q];
-          D0[q] = 3 * s1 * s1 * (P1[q] - P0[q]) + 6 * s1 * T * (P2[q] - P1[q]) + 3 * T * T * (P3[q] - P2[q]);
-        }
-        const D = norm3(D0);
-        const Nn = norm3([D[1], -D[0], 0]), Bn = cross3(D, Nn);
-        const rad = 0.028 - 0.01 * T, cs = 0.7 + 0.4 * T, sc = B.stemCol[f];
+        const k0 = 3 * s1 * s1, k1 = 6 * s1 * T, k2 = 3 * T * T;
+        bx = w0 * P0[0] + w1 * P1[0] + w2 * P2[0] + w3 * P3[0];
+        by = w0 * P0[1] + w1 * P1[1] + w2 * P2[1] + w3 * P3[1];
+        bz = w0 * P0[2] + w1 * P1[2] + w2 * P2[2] + w3 * P3[2];
+        let dx = k0 * (P1[0] - P0[0]) + k1 * (P2[0] - P1[0]) + k2 * (P3[0] - P2[0]);
+        let dy = k0 * (P1[1] - P0[1]) + k1 * (P2[1] - P1[1]) + k2 * (P3[1] - P2[1]);
+        let dz = k0 * (P1[2] - P0[2]) + k1 * (P2[2] - P1[2]) + k2 * (P3[2] - P2[2]);
+        const dl = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-9; dx /= dl; dy /= dl; dz /= dl;
+        const nl = Math.sqrt(dy * dy + dx * dx) || 1e-9, nx = dy / nl, ny = -dx / nl;      // normal = (dy, -dx, 0)
+        const qx = -dz * ny, qy = dz * nx, qz = dx * ny - dy * nx;                         // binormal = d x n
+        const rad = 0.028 - 0.01 * T, cs = 0.7 + 0.4 * T;
         for (let a = 0; a < NA; a++) {
-          const ca = Math.cos(a * TAU / NA), sa = Math.sin(a * TAU / NA);
-          const rx = ca * Nn[0] + sa * Bn[0], ry = ca * Nn[1] + sa * Bn[1], rz = ca * Nn[2] + sa * Bn[2];
-          add(Bp[0] + rad * rx, Bp[1] + rad * ry, Bp[2] + rad * rz, rx, ry, rz, sc[0] * cs, sc[1] * cs, sc[2] * cs, -1, 100 + f);
+          const ca = STEM_COS[a], sa = STEM_SIN[a];
+          const rx = ca * nx + sa * qx, ry = ca * ny + sa * qy, rz = sa * qz;
+          add(bx + rad * rx, by + rad * ry, bz + rad * rz, rx, ry, rz, sc[0] * cs, sc[1] * cs, sc[2] * cs, -1, 100 + f);
         }
       }
-      head = Bp.slice();
-      heads.push(head);
+      heads.push([bx, by, bz]);
     }
 
     // ---- leaves
@@ -293,28 +302,29 @@
         if (e > 0.2) {
           const sz = B.size[f] * hs;
           const Ls = sz * 0.72 * e, Lp = sz * 0.7 * e;
-          const OFF = [[0, 0, 0], [1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
-                       [1, 1, 0], [-1, -1, 0], [1, -1, 0], [-1, 1, 0]];
+          const OFF = STAMEN_OFF;
           for (let k = 0; k < 6; k++) {
-            const ph = B.petalRot[f] + k * Math.PI / 3 + Math.PI / 6;
-            const rs = [0, 1, 2].map((c) => Math.cos(ph) * e1[c] + Math.sin(ph) * e2[c]);
-            let end = hd;
+            const ph = B.petalRot[f] + k * Math.PI / 3 + Math.PI / 6, cph = Math.cos(ph), sph = Math.sin(ph);
+            const rs0 = cph * e1[0] + sph * e2[0], rs1 = cph * e1[1] + sph * e2[1], rs2 = cph * e1[2] + sph * e2[2];
+            let ex = hd[0], ey = hd[1], ez = hd[2];
             for (let i = 0; i < 18; i++) {
               const s = i / 17, a = Ls * 0.8 * s, r = Ls * 0.62 * Math.pow(s, 1.4);
-              end = [0, 1, 2].map((c) => hd[c] + ax[c] * a + rs[c] * r);
-              add(end[0], end[1], end[2], 0, 0, 0, 215, 235, 170, 0.85, f);
+              ex = hd[0] + ax[0] * a + rs0 * r; ey = hd[1] + ax[1] * a + rs1 * r; ez = hd[2] + ax[2] * a + rs2 * r;
+              add(ex, ey, ez, 0, 0, 0, 215, 235, 170, 0.85, f);
             }
-            for (const o of OFF) add(end[0] + o[0] * 0.032 * sz, end[1] + o[1] * 0.032 * sz, end[2] + o[2] * 0.032 * sz,
-                                     0, 0, 0, 190, 80, 30, 0.7, f);
+            for (let o = 0; o < OFF.length; o++) add(ex + OFF[o][0] * 0.032 * sz, ey + OFF[o][1] * 0.032 * sz, ez + OFF[o][2] * 0.032 * sz,
+                                                     0, 0, 0, 190, 80, 30, 0.7, f);
           }
-          let tip = hd;
+          let tx = hd[0], ty = hd[1], tz = hd[2];
           for (let i = 0; i < 18; i++) {
             const s = i / 17;
-            tip = [0, 1, 2].map((c) => hd[c] + ax[c] * Lp * s + e1[c] * 0.08 * Lp * s * s);
-            add(tip[0], tip[1], tip[2], 0, 0, 0, 200, 225, 140, 0.75, f);
+            tx = hd[0] + ax[0] * Lp * s + e1[0] * 0.08 * Lp * s * s;
+            ty = hd[1] + ax[1] * Lp * s + e1[1] * 0.08 * Lp * s * s;
+            tz = hd[2] + ax[2] * Lp * s + e1[2] * 0.08 * Lp * s * s;
+            add(tx, ty, tz, 0, 0, 0, 200, 225, 140, 0.75, f);
           }
-          for (const o of OFF.slice(0, 5)) add(tip[0] + o[0] * 0.03 * sz, tip[1] + o[1] * 0.03 * sz, tip[2] + o[2] * 0.03 * sz,
-                                               0, 0, 0, 120, 155, 60, 0.55, f);
+          for (let o = 0; o < 5; o++) add(tx + OFF[o][0] * 0.03 * sz, ty + OFF[o][1] * 0.03 * sz, tz + OFF[o][2] * 0.03 * sz,
+                                          0, 0, 0, 120, 155, 60, 0.55, f);
         }
       }
     }
@@ -399,6 +409,7 @@
   const HALF = norm3([LIGHT[0], LIGHT[1], LIGHT[2] + 1]);
 
   const ZS = new Float32Array(CAP);      // depth of every point (reused every frame)
+  let sparkle = 12345;                   // state of the little random generator for the shimmer
   function drawBouquet(B, t) {
     bouquetPoints(B, t);
     const ay = 0.22 * Math.sin(TAU * t / 20), axr = 0.16;
@@ -430,14 +441,15 @@
         else {
           const X = PN[k], Y = PN[k + 1], Z = PN[k + 2];
           let nx = M[0] * X + M[1] * Y + M[2] * Z, ny = M[3] * X + M[4] * Y + M[5] * Z, nz = M[6] * X + M[7] * Y + M[8] * Z;
-          const l = Math.hypot(nx, ny, nz) || 1e-9; nx /= l; ny /= l; nz /= l;
+          const l = Math.sqrt(nx * nx + ny * ny + nz * nz) || 1e-9; nx /= l; ny /= l; nz /= l;
           const lam = Math.abs(nx * LIGHT[0] + ny * LIGHT[1] + nz * LIGHT[2]);
           const spec = Math.pow(Math.abs(nx * HALF[0] + ny * HALF[1] + nz * HALF[2]), 30);
           br = 0.22 + 0.78 * Math.pow(lam, 1.1) + 0.3 * spec;
         }
         br *= 0.78 + 0.22 * clamp((ZS[w] + 2) / 4, 0, 1);
         br = clamp(br, 0, 1);
-        const jitter = Math.random() < 0.04 ? Math.floor(Math.random() * 3) - 1 : 0;
+        sparkle = (Math.imul(sparkle, 1664525) + 1013904223) | 0;      // cheap random, no garbage
+        const jitter = (sparkle >>> 0) < 171798692 ? ((sparkle >>> 8) % 3) - 1 : 0;   // ~4% of cells
         let ri = clamp(Math.round(br * (nr - 1)) + jitter, 0, nr - 1);
         let m = 0.55 + 0.75 * br;
         // outline: a different, nearer object right next to this cell
@@ -500,34 +512,40 @@
     return [cx + X * s * aspect, gy - (Y + P.hop) * s];
   }
 
+  // Cat shapes are plain data checked by one function (no wrapped closures), so testing
+  // thousands of cells a frame makes no garbage. Each shape lives in a "space":
+  // 0 = ground (legs, waving paw), 1 = body (rides the bounce), 2 = head (tilted), 3 = flicking ear.
+  const SH_E = 0, SH_C = 1, SH_T = 2, SH_U = 3;      // ellipse, capsule, triangle, union of ellipses
+  const shE = (cx, cy, rx, ry) => ({ k: SH_E, a: cx, b: cy, c: rx, d: ry, e: 0, f: 0, list: null });
+  const shC = (ax, ay, bx, by, r) => ({ k: SH_C, a: ax, b: ay, c: bx, d: by, e: r, f: 0, list: null });
+  const shT = (p0, p1, p2) => ({ k: SH_T, a: p0[0], b: p0[1], c: p1[0], d: p1[1], e: p2[0], f: p2[1], list: null });
+  const shU = (...list) => ({ k: SH_U, a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, list });
+  let catIdx = new Int16Array(0), catBr = new Float32Array(0);   // reused raster buffers
+  // the frame's shapes flattened into number tables, so the per-cell test below is plain
+  // arithmetic (no function calls, no objects): that's what keeps it garbage-free
+  const FK = new Int8Array(512), FP = new Float64Array(512 * 6);
+  const QR = new Int16Array(256), QC = new Int16Array(256), QS = new Int8Array(256), QM = new Float64Array(256);
+
   function drawCat(cx, gy, s, P) {
     const sx = s * aspect, t = P.t;
     const c0 = Math.max(0, Math.floor(cx - 2.3 * sx)), c1 = Math.min(cols, Math.ceil(cx + 2.4 * sx));
     const r0 = Math.max(0, Math.floor(gy - (3.4 + P.hop) * s)), r1 = Math.min(rows, Math.ceil(gy + 0.3 * s));
     if (c0 >= c1 || r0 >= r1) return;
-    const shapes = [];   // [test(X, Y), colour, layer] in painting order
+    const shapes = [];   // painting order; the last shape that covers a cell wins
     let layer = 0;       // parts on a higher layer get an ink line where they overlap lower ones
-    const paint = (test, col) => shapes.push([test, col, layer]);
-
-    // body parts ride the bounce; the head also tilts around the neck and bobs a little later
+    const paint = (shape, col, sp, extra) => shapes.push({ shape, col, sp, lay: layer,
+      clip: extra && extra.clip || null, minY: extra && extra.minY !== undefined ? extra.minY : -1e9 });
     const bob = P.bob;
-    const up = (f) => (X, Y) => f(X, Y - bob);
-    const hc = Math.cos(P.headTilt), hs = Math.sin(P.headTilt);
-    const head = (f) => (X, Y) => {
-      const dx = X - NECK_X, dy = Y - bob - P.headBob - NECK_Y;
-      return f(NECK_X + dx * hc + dy * hs, NECK_Y - dx * hs + dy * hc);
-    };
-    const any = (...fs) => (X, Y) => fs.some((f) => f(X, Y));
 
     // legs: a diagonal trot, paws lifting in an arc
     const leg = (hx, ph, shade, thigh) => {
       const a = P.walk + ph;
       const sw = P.moving ? Math.sin(a) : 0, lift = P.moving ? Math.max(0, Math.cos(a)) : 0;
       const fx = hx + 0.17 * sw * P.stride, fy = 0.08 + 0.14 * lift * P.stride;
-      const limb = capsule(hx, 0.46 + bob, fx, fy, 0.11);
-      paint(limb, mul(CAL_WHITE, shade));
-      if (thigh) paint((X, Y) => Y > 0.3 + bob && limb(X, Y), mul(thigh, shade));
-      paint(ellipse(fx + 0.04, fy - 0.005, 0.14, 0.085), mul(CAL_WHITE, shade));
+      const limb = shC(hx, 0.46 + bob, fx, fy, 0.11);
+      paint(limb, mul(CAL_WHITE, shade), 0);
+      if (thigh) paint(limb, mul(thigh, shade), 0, { minY: 0.3 + bob });
+      paint(shE(fx + 0.04, fy - 0.005, 0.14, 0.085), mul(CAL_WHITE, shade), 0);
     };
     leg(0.36, Math.PI, 0.72);                     // far front
     leg(-0.5, 0, 0.72, CAL_ORANGE);               // far back
@@ -535,53 +553,46 @@
 
     // tail: a striped S that sways in a travelling wave, fluffy tip
     {
-      let tx = -0.66, ty = 0.68, prev = [tx, ty];
+      let tx = -0.66, ty = 0.68, px = tx, py = ty;
       const N = 12, segL = 0.1;
       for (let i = 0; i < N; i++) {
         const u = i / (N - 1);
         const ang = 2.25 - 0.9 * u - 1.3 * u * u * u + P.tailWag * 0.38 * u * Math.sin(t * P.tailSpeed - u * 3.2);
         tx += Math.cos(ang) * segL; ty += Math.sin(ang) * segL;
         const band = u < 0.34 ? CAL_ORANGE : u < 0.58 ? CAL_BLACK : u < 0.8 ? CAL_ORANGE : CAL_BLACK;
-        paint(up(capsule(prev[0], prev[1], tx, ty, 0.095 - 0.012 * u)), band);
-        prev = [tx, ty];
+        paint(shC(px, py, tx, ty, 0.095 - 0.012 * u), band, 1);
+        px = tx; py = ty;
       }
-      paint(up(ellipse(tx, ty, 0.11, 0.1)), CAL_BLACK);
+      paint(shE(tx, ty, 0.11, 0.1), CAL_BLACK, 1);
     }
 
     // body: a little bean with calico patches and a white chest
     layer = 2;
-    const body = up(any(ellipse(-0.1, 0.68, 0.7, 0.38), ellipse(0.32, 0.74, 0.34, 0.34)));
-    paint(body, CAL_WHITE);
-    const pa = up(ellipse(-0.42, 0.86, 0.42, 0.28)), pb = up(ellipse(0.0, 1.0, 0.26, 0.15)), pc = up(ellipse(-0.74, 0.62, 0.16, 0.2));
-    paint((X, Y) => body(X, Y) && pa(X, Y), CAL_ORANGE);
-    paint((X, Y) => body(X, Y) && pb(X, Y), CAL_BLACK);
-    paint((X, Y) => body(X, Y) && pc(X, Y), CAL_BLACK);
+    const body = shU(shE(-0.1, 0.68, 0.7, 0.38), shE(0.32, 0.74, 0.34, 0.34));
+    paint(body, CAL_WHITE, 1);
+    paint(shE(-0.42, 0.86, 0.42, 0.28), CAL_ORANGE, 1, { clip: body });
+    paint(shE(0.0, 1.0, 0.26, 0.15), CAL_BLACK, 1, { clip: body });
+    paint(shE(-0.74, 0.62, 0.16, 0.2), CAL_BLACK, 1, { clip: body });
     layer = 3;
     leg(-0.62, Math.PI, 1, CAL_ORANGE);           // near back
     if (P.wave <= 0.02) leg(0.26, 0, 1);          // near front (unless it's waving)
     layer = 4;
 
-    // head
-    const twitch = P.earTwitch * 0.3;
-    const earR = (f) => (X, Y) => {               // the black ear flicks around its base
-      const px = 1.14, py = 1.86, c = Math.cos(twitch), sn = Math.sin(twitch), dx = X - px, dy = Y - py;
-      return f(px + dx * c + dy * sn, py - dx * sn + dy * c);
-    };
-    paint(head(triangle([0.2, 1.74], [0.29, 2.33], [0.68, 1.96])), CAL_ORANGE);
-    paint(head(earR(triangle([0.9, 1.96], [1.27, 2.33], [1.37, 1.74]))), CAL_BLACK);
-    paint(head(triangle([0.3, 1.82], [0.34, 2.18], [0.58, 1.97])), PINK);
-    paint(head(earR(triangle([1.0, 1.97], [1.23, 2.18], [1.27, 1.82]))), PINK);
-    const skull = any(ellipse(0.78, 1.45, 0.66, 0.53), ellipse(0.3, 1.24, 0.25, 0.18), ellipse(1.26, 1.24, 0.25, 0.18));
-    paint(head(skull), CAL_WHITE);
-    const ho = ellipse(0.34, 1.76, 0.42, 0.32), hb = ellipse(1.22, 1.82, 0.32, 0.22);
-    paint(head((X, Y) => skull(X, Y) && ho(X, Y)), CAL_ORANGE);
-    paint(head((X, Y) => skull(X, Y) && hb(X, Y)), CAL_BLACK);
-    paint(head(ellipse(0.36, 1.26, 0.12, 0.065)), PINK);      // blush
-    paint(head(ellipse(1.2, 1.26, 0.12, 0.065)), PINK);
-    paint(head(triangle([0.71, 1.33], [0.85, 1.33], [0.78, 1.26])), PINK);   // nose
+    // head (the black ear flicks around its base now and then)
+    paint(shT([0.2, 1.74], [0.29, 2.33], [0.68, 1.96]), CAL_ORANGE, 2);
+    paint(shT([0.9, 1.96], [1.27, 2.33], [1.37, 1.74]), CAL_BLACK, 3);
+    paint(shT([0.3, 1.82], [0.34, 2.18], [0.58, 1.97]), PINK, 2);
+    paint(shT([1.0, 1.97], [1.23, 2.18], [1.27, 1.82]), PINK, 3);
+    const skull = shU(shE(0.78, 1.45, 0.66, 0.53), shE(0.3, 1.24, 0.25, 0.18), shE(1.26, 1.24, 0.25, 0.18));
+    paint(skull, CAL_WHITE, 2);
+    paint(shE(0.34, 1.76, 0.42, 0.32), CAL_ORANGE, 2, { clip: skull });
+    paint(shE(1.22, 1.82, 0.32, 0.22), CAL_BLACK, 2, { clip: skull });
+    paint(shE(0.36, 1.26, 0.12, 0.065), PINK, 2);      // blush
+    paint(shE(1.2, 1.26, 0.12, 0.065), PINK, 2);
+    paint(shT([0.71, 1.33], [0.85, 1.33], [0.78, 1.26]), PINK, 2);   // nose
     if (P.mouth > 0) {
-      paint(head(ellipse(0.78, 1.14, 0.1, 0.06 + 0.05 * P.mouth)), MOUTH);
-      paint(head(ellipse(0.78, 1.09, 0.06, 0.03)), PINK);                    // tongue
+      paint(shE(0.78, 1.14, 0.1, 0.06 + 0.05 * P.mouth), MOUTH, 2);
+      paint(shE(0.78, 1.09, 0.06, 0.03), PINK, 2);                    // tongue
     }
 
     // the waving paw (in front of everything)
@@ -590,35 +601,95 @@
       const ang = -1.45 + P.wave * (1.75 + 0.36 * Math.sin(P.wavePh));   // up and out in front, waving
       const sxp = 0.45, syp = 0.66 + bob;
       const px = sxp + 1.1 * Math.cos(ang), py = syp + 1.1 * Math.sin(ang);
-      paint(capsule(sxp, syp, px, py, 0.105), CAL_WHITE);
-      paint(ellipse(px, py, 0.13, 0.12), CAL_WHITE);
-      paint(ellipse(px + 0.02 * Math.cos(ang), py + 0.06, 0.05, 0.035), PINK);  // toe bean
+      paint(shC(sxp, syp, px, py, 0.105), CAL_WHITE, 0);
+      paint(shE(px, py, 0.13, 0.12), CAL_WHITE, 0);
+      paint(shE(px + 0.02 * Math.cos(ang), py + 0.06, 0.05, 0.035), PINK, 0);  // toe bean
     }
 
-    // rasterise: each cell -> cat units (undo hop, lean and squash), last shape wins
+    // rasterise: each cell -> cat units (undo hop, lean and squash), then into each space
     const cl = Math.cos(P.lean), sl = Math.sin(P.lean);
-    const W = c1 - c0, H = r1 - r0;
-    const colA = new Array(W * H).fill(null), brA = new Float32Array(W * H), layA = new Int8Array(W * H).fill(-1);
+    const hc = Math.cos(P.headTilt), hs = Math.sin(P.headTilt);
+    const tw = P.earTwitch * 0.3, ec = Math.cos(tw), es = Math.sin(tw), EPX = 1.14, EPY = 1.86;
+    const W = c1 - c0, H = r1 - r0, n = W * H;
+    if (catIdx.length < n) { catIdx = new Int16Array(n * 2); catBr = new Float32Array(n * 2); }
+    const ns = shapes.length;
+    let nf = 0;
+    const flat = (o) => {                        // shape object -> record index (union: children follow)
+      const i = nf++;
+      FK[i] = o.k;
+      if (o.k === SH_U) {
+        const first = nf;
+        for (const ch of o.list) flat(ch);
+        FP[i * 6] = first; FP[i * 6 + 1] = o.list.length;
+      } else {
+        FP[i * 6] = o.a; FP[i * 6 + 1] = o.b; FP[i * 6 + 2] = o.c; FP[i * 6 + 3] = o.d; FP[i * 6 + 4] = o.e; FP[i * 6 + 5] = o.f;
+      }
+      return i;
+    };
+    for (let q = 0; q < ns; q++) {
+      const it = shapes[q];
+      QR[q] = flat(it.shape); QC[q] = it.clip ? flat(it.clip) : -1; QS[q] = it.sp; QM[q] = it.minY;
+    }
     for (let r = 0; r < H; r++) {
       const Ys = (gy - (r0 + r + 0.5)) / s - P.hop;
       for (let c = 0; c < W; c++) {
         const Xs = (c0 + c + 0.5 - cx) / sx;
         const X = (Xs * cl + Ys * sl) / P.sqx, Y = (-Xs * sl + Ys * cl) / P.sqy;
-        let col = null, lay = -1;
-        for (let q = 0; q < shapes.length; q++) if (shapes[q][0](X, Y)) { col = shapes[q][1]; lay = shapes[q][2]; }
-        colA[r * W + c] = col; layA[r * W + c] = lay;
-        brA[r * W + c] = clamp(0.74 + 0.26 * (Y - 0.2) / 2.0, 0.62, 1);
+        const Yb = Y - bob;
+        const hdx = X - NECK_X, hdy = Y - bob - P.headBob - NECK_Y;
+        const Xh = NECK_X + hdx * hc + hdy * hs, Yh = NECK_Y - hdx * hs + hdy * hc;
+        const edx = Xh - EPX, edy = Yh - EPY;
+        const Xe = EPX + edx * ec + edy * es, Ye = EPY - edx * es + edy * ec;
+        let best = -1;
+        for (let q = 0; q < ns; q++) {
+          const sp = QS[q];
+          const x = sp === 0 ? X : sp === 1 ? X : sp === 2 ? Xh : Xe;
+          const y = sp === 0 ? Y : sp === 1 ? Yb : sp === 2 ? Yh : Ye;
+          if (!(y > QM[q])) continue;
+          let ok = true;
+          for (let pass = 0; pass < 2 && ok; pass++) {        // the shape, then its clip (if any)
+            const i = pass === 0 ? QR[q] : QC[q];
+            if (i < 0) break;
+            let lo = i, hi = i + 1;
+            if (FK[i] === SH_U) { lo = FP[i * 6]; hi = lo + FP[i * 6 + 1]; }
+            let hit = false;
+            for (let j = lo; j < hi && !hit; j++) {
+              const o = j * 6, A = FP[o], Bq = FP[o + 1], Cq = FP[o + 2], Dq = FP[o + 3], Eq = FP[o + 4], Fq = FP[o + 5];
+              const kind = FK[j];
+              if (kind === SH_E) {
+                hit = ((x - A) / Cq) ** 2 + ((y - Bq) / Dq) ** 2 <= 1;
+              } else if (kind === SH_C) {
+                const dx = Cq - A, dy = Dq - Bq;
+                const h = clamp(((x - A) * dx + (y - Bq) * dy) / (dx * dx + dy * dy + 1e-9), 0, 1);
+                hit = (x - A - h * dx) ** 2 + (y - Bq - h * dy) ** 2 <= Eq * Eq;
+              } else {
+                const d1 = (x - Cq) * (Bq - Dq) - (A - Cq) * (y - Dq);
+                const d2 = (x - Eq) * (Dq - Fq) - (Cq - Eq) * (y - Fq);
+                const d3 = (x - A) * (Fq - Bq) - (Eq - A) * (y - Bq);
+                hit = !((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0));
+              }
+            }
+            ok = hit;
+          }
+          if (ok) best = q;
+        }
+        catIdx[r * W + c] = best;
+        catBr[r * W + c] = clamp(0.74 + 0.26 * (Y - 0.2) / 2.0, 0.62, 1);
       }
     }
     // "solid" neighbour: filled and not on a lower layer (else this cell gets an ink line)
-    const solid = (r, c, lay) => r >= 0 && r < H && c >= 0 && c < W && layA[r * W + c] >= lay;
+    const solid = (r, c, lay) => {
+      if (r < 0 || r >= H || c < 0 || c >= W) return false;
+      const q = catIdx[r * W + c];
+      return q >= 0 && shapes[q].lay >= lay;
+    };
     for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
-      const col = colA[r * W + c];
-      if (!col) continue;
-      const lay = layA[r * W + c];
+      const q = catIdx[r * W + c];
+      if (q < 0) continue;
+      const col = shapes[q].col, lay = shapes[q].lay;
       const edge = !(solid(r - 1, c, lay) && solid(r + 1, c, lay) && solid(r, c - 1, lay) && solid(r, c + 1, lay))
         || r === 0 || c === 0 || r === H - 1 || c === W - 1;
-      const br = brA[r * W + c];
+      const br = catBr[r * W + c];
       const ri = edge ? 6 : clamp(Math.round(5 + br * 3), 0, RAMP.length - 1);
       const m = (edge ? 0.55 : 1) * (0.8 + 0.2 * br);
       setCell((r0 + r) * cols + c0 + c, RAMP_IDX[ri], col[0] * m, col[1] * m, col[2] * m);
@@ -978,7 +1049,7 @@
   // starts the player (muted, just to buffer); YouTube then plays when the flowers start.
   // The YouTube video itself is never shown, and there is no other button to tap.
   const MUSIC_ON = params.get("music") !== "0";
-  const YT_ID = params.get("yt") || "WOD_R7Yu8vw";
+  const YT_ID = /^[\w-]{11}$/.test(params.get("yt") || "") ? params.get("yt") : "WOD_R7Yu8vw";   // ids are 11 chars
   const YT_START = Math.max(0, parseFloat(params.get("ytstart") || "0") || 0);   // skip silence at the start
   const FADE_IN = 0.15, FADE_OUT = 0.5;     // short fade-in: just enough to avoid a click
   const MAX_HOLD = 3.0;                     // never wait longer than this for the music
@@ -1016,7 +1087,17 @@
   function loadYouTube() {
     if (!MUSIC_ON || !ytBox) return;
     window.onYouTubeIframeAPIReady = () => {
+      try { createPlayer(); } catch (e) { musicFailed(); }
+    };
+    const s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    s.onerror = musicFailed;
+    document.head.appendChild(s);
+  }
+
+  function createPlayer() {
       music.player = new YT.Player("yt-player", {
+        host: "https://www.youtube-nocookie.com",          // YouTube's privacy-enhanced mode
         width: 200, height: 200, videoId: YT_ID,
         playerVars: { playsinline: 1, controls: 0, disablekb: 1, rel: 0, fs: 0,
                       iv_load_policy: 3, origin: location.origin },
@@ -1027,6 +1108,7 @@
             if (gateWaiting) gateReady();
             else if (music.want && !music.paused) playFromStart();
             else if (started) primeMusic();
+            if (started) showSound();                // page opened before YouTube was ready
           },
           onStateChange: (e) => {
             const S = YT.PlayerState;
@@ -1046,11 +1128,6 @@
           onError: musicFailed,
         },
       });
-    };
-    const s = document.createElement("script");
-    s.src = "https://www.youtube.com/iframe_api";
-    s.onerror = musicFailed;
-    document.head.appendChild(s);
   }
 
   // while the cat walks: play a moment muted so YouTube has the start buffered
@@ -1169,7 +1246,7 @@
   }
 
   function showSound() {
-    if (!soundBox || music.failed) return;
+    if (!soundBox || music.failed || !music.ready) return;     // only once there is music to control
     soundBox.hidden = false;
     requestAnimationFrame(() => soundBox.classList.add("show"));
   }
@@ -1272,7 +1349,13 @@
     if (e.code === "Space" && !(e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement)) {
       setPaused(!paused); e.preventDefault();
     }
-    if (e.key === "r" || e.key === "R") { t = 0; held = 0; setPaused(false); }
+    if (e.key === "r" || e.key === "R") { t = 0; held = 0; setPaused(false); if (!INTRO) musicRestart(); }
+  });
+
+  // background tab: the animation stops, so the song waits too (and they stay in sync)
+  document.addEventListener("visibilitychange", () => {
+    if (!music.ready || music.failed || !music.want || paused) return;
+    if (document.hidden) music.player.pauseVideo(); else music.player.playVideo();
   });
 
   // debugging / screenshots: window.renderAt(seconds) draws one frame and pauses

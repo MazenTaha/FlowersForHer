@@ -1,10 +1,10 @@
 # Flowers For Her
 
-An animated ASCII lily bouquet written in Python.
+An animated ASCII lily bouquet website.
 
-It starts with a cute 2D calico cat walking in from the left. It stops in the
-middle, hops, and says **"Asmaa!"** in a comic speech bubble, then walks off
-to the right. Once it's gone, the flowers start growing.
+It starts with a cute cartoon calico cat trotting in from the left. It skids to
+a stop in the middle, hops, says **"Asmaa!"** in a comic speech bubble and
+waves, then zooms off to the right. Once it's gone, the flowers start growing.
 
 A 3D bouquet of stargazer-style lilies (pink stripes, pale edges, speckles and
 orange stamens) with buds, leaves and a pink ribbon bow, drawn as coloured
@@ -14,17 +14,16 @@ breathing, while pastel stars twinkle behind them.
 
 ## Website (Vercel)
 
-The web version lives in `public/` (`index.html` + `flowers.js`, plain JavaScript,
-no build step). It does the same thing as the Python version: the calico cat
-intro, then the lily bouquet.
+Everything lives in `public/` (`index.html` + `flowers.js`, plain JavaScript,
+no build step).
 
-Try it locally:
+Try it locally with any static file server, for example:
 
 ```
-python -m http.server 5173 --directory public
+npx serve public
 ```
 
-and open http://localhost:5173.
+and open the address it prints.
 
 Deploy on Vercel (either way works):
 
@@ -69,45 +68,3 @@ and starts again with **Re-bloom**.
   it, and `?music=0` turns the music off.
 
 Keys: Space = pause, R = restart.
-
-## Run (Python)
-
-```
-pip install -r requirements.txt
-python flowers.py
-```
-
-Run it in the terminal instead of a window (Windows Terminal recommended, maximise it and shrink the font for more detail):
-
-```
-python flowers.py --terminal
-```
-
-Add a line under the bouquet:
-
-```
-python flowers.py --message "For you"
-```
-
-## Keys (window)
-
-| Key        | Action          |
-|------------|-----------------|
-| Space      | pause / resume  |
-| S          | save screenshot |
-| Esc / Q    | quit            |
-
-## Options
-
-| Option            | Default | What it does                                              |
-|-------------------|---------|-----------------------------------------------------------|
-| `--terminal`      | off     | draw in the terminal instead of a window                  |
-| `--message TEXT`  | none    | text shown under the bouquet                              |
-| `--say TEXT`      | Asmaa!  | what the cat says in its speech bubble                    |
-| `--no-intro`      | off     | skip the cat and start straight with the flowers          |
-| `--font-size N`   | 9       | window character size; smaller means more detail           |
-| `--width/--height`| auto    | window size in pixels                                     |
-| `--tint 0-1`      | 0.45    | dim colour behind each character; `0` = pure ASCII on black |
-| `--seed N`        | 7       | a different seed gives a different bouquet                |
-| `--fps N`         | 30      | frame rate                                                |
-| `--save FILE --at T` | -    | render the frame at time `T` seconds to a PNG and exit    |

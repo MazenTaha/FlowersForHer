@@ -82,9 +82,9 @@
     #gate[hidden] { display: none; }
     #gate.gone { opacity: 0; }
     #gate .flower { font-size: 54px; animation: beat 1.6s ease-in-out infinite; }
-    #gate .hint { text-shadow: 0 0 14px rgba(255, 120, 180, 0.8); animation: glow 1.6s ease-in-out infinite; }
+    #gate .hint { text-shadow: 0 0 14px rgba(255, 120, 180, 0.8); animation: glow 1.6s ease-in-out infinite;
+                  transition: opacity 0.4s ease; }
     #gate:focus { outline: none; }
-    #gate .hint { transition: opacity 0.4s ease; }
     #gate.loading { cursor: default; }
     #gate.loading .hint { opacity: 0; animation: none; }   /* "tap to open" once the music is ready */
     @keyframes beat {
@@ -198,7 +198,7 @@
   </style>
 </head>
 <body>
-  <canvas id="c" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
+  <canvas id="c" role="img" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
   <button id="rebloom" type="button">Re-bloom</button>
   <button id="gate" type="button" hidden><span class="flower" aria-hidden="true">🌸</span><span class="hint">tap to open</span></button>
   <div id="sound" hidden data-level="2">

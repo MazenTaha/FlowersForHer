@@ -1,6 +1,3 @@
 # Only the website in public/ needs to be uploaded to Vercel.
 share/
-*.py
-requirements.txt
-__pycache__/
 *.png
