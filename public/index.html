@@ -25,6 +25,7 @@
     }
     canvas {
       display: block;
+      outline: none;
       image-rendering: auto;
     }
     #rebloom {
@@ -172,10 +173,9 @@
     #volume:focus { outline: none; }
     #volume:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
 
-    /* the YouTube player that plays the song: always invisible. If a browser blocks the
-       sound (some iPhones), our own pink "tap for music" pill appears in the middle; the
-       tap goes through it to the invisible player underneath (cut to the pill's shape),
-       which is what lets the browser start the song. */
+    /* the YouTube player that plays the song: always invisible. While "tap to open" is
+       showing it is blown up (3x the window, centred) and sits on top, so the opening tap
+       lands on the player itself; its title and logo corners stay off-screen. */
     #yt {
       position: fixed;
       left: 50%;
@@ -188,25 +188,7 @@
     }
     #yt[hidden] { display: none; }
     #yt iframe { display: block; width: 100%; height: 100%; border: 0; }
-    #yt.blocked { pointer-events: auto; clip-path: inset(78px 10px 78px 10px round 999px); }
-    #tapmusic {
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      width: 180px;
-      margin: -22px 0 0 -90px;
-      padding: 12px 0;
-      border-radius: 999px;
-      background: #ff5fa2;
-      box-shadow: 0 0 18px rgba(255, 120, 180, 0.7);
-      color: #fff;
-      font: 700 17px/20px "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
-      text-align: center;
-      pointer-events: none;           /* the tap goes through to the player */
-      display: none;
-      animation: glow 1.6s ease-in-out infinite;
-    }
-    #yt.blocked + #tapmusic { display: block; }
+    #yt.catch { width: 300vw; height: 300vh; margin: -150vh 0 0 -150vw; pointer-events: auto; }
 
     noscript {
       color: #f9a8d4;
@@ -217,7 +199,7 @@
   </style>
 </head>
 <body>
-  <canvas id="c" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
+  <canvas id="c" tabindex="-1" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
   <button id="rebloom" type="button">Re-bloom</button>
   <button id="gate" type="button" hidden><span class="flower" aria-hidden="true">🌸</span><span class="hint">tap to open</span></button>
   <div id="sound" hidden data-level="2">
@@ -232,7 +214,6 @@
     <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Music volume">
   </div>
   <div id="yt"><div id="yt-player"></div></div>
-  <div id="tapmusic" aria-hidden="true">tap for music ♪</div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
   <script src="flowers.js"></script>
 </body>

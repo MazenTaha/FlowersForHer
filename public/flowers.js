@@ -771,10 +771,11 @@
   // the flowers: the song is buffered (muted) while the cat walks, and the bouquet's first
   // frame waits until YouTube really is playing, so sound and growth begin on the same
   // frame. It loops while the bouquet stays and restarts with Re-bloom.
-  // Browsers only allow sound after a tap, so the page first shows "tap to open"; if a
-  // browser still blocks it (some iPhones), a "tap for music" pill appears; the tap lands
-  // on the invisible player under it, and the pill goes away once the music plays.
-  // The YouTube video itself is never shown.
+  // Browsers only allow sound after a tap, so the page first shows "tap to open". Over that
+  // screen lies the invisible YouTube player, blown up so its middle covers the whole
+  // window: the tap that opens the page lands on the player itself (and starts it muted),
+  // which is what convinces even strict browsers (iPhones) to allow the music later.
+  // The YouTube video itself is never shown, and there is no other button to tap.
   const MUSIC_ON = params.get("music") !== "0";
   const YT_ID = params.get("yt") || "WOD_R7Yu8vw";
   const YT_START = Math.max(0, parseFloat(params.get("ytstart") || "0") || 0);   // skip silence at the start
@@ -787,7 +788,7 @@
     want: false,        // the bouquet wants music now
     playing: false,     // YouTube says it's playing (and it isn't the muted pre-buffer)
     priming: false, primed: false, primeTimer: 0,
-    fade: 0, sentVol: -1, sentMute: null, blockTimer: 0,
+    fade: 0, sentVol: -1, sentMute: null,
     volume: 0.7, muted: false, paused: false,
   };
   try {
@@ -799,6 +800,15 @@
   } catch (e) { /* storage blocked: defaults are fine */ }
 
   const ytBox = document.getElementById("yt");
+  let gateWaiting = false;               // "tap to open" is on screen
+
+  // gate on screen and player ready: let the player catch the opening tap (muted)
+  function armTapCatcher() {
+    if (!gateWaiting || !music.ready || music.failed) return;
+    music.priming = true;
+    applyVolume();                       // mutes (see applyVolume)
+    ytBox.classList.add("catch");
+  }
 
   function musicFailed() {
     music.failed = true;
@@ -818,19 +828,19 @@
           onReady: () => {
             music.ready = true;
             music.sentVol = -1; music.sentMute = null;
-            if (music.want && !music.paused) playFromStart();
+            if (gateWaiting) armTapCatcher();
+            else if (music.want && !music.paused) playFromStart();
             else if (started) primeMusic();
           },
           onStateChange: (e) => {
             const S = YT.PlayerState;
+            if (gateWaiting && (e.data === S.PLAYING || e.data === S.BUFFERING)) openGate();   // the opening tap
             if (e.data === S.PLAYING) {
               if (music.priming) {
                 endPriming();
                 if (!music.want) return;             // buffered: wait silently for the flowers
               }
               music.playing = true;
-              clearTimeout(music.blockTimer);
-              ytBox.classList.remove("blocked");
             } else if (e.data === S.ENDED) {
               music.playing = false;
               if (music.want && !music.paused) playFromStart(true);   // loop
@@ -855,7 +865,7 @@
     applyVolume();                       // mutes (see applyVolume)
     music.player.seekTo(YT_START, true);
     music.player.playVideo();
-    music.primeTimer = setTimeout(endPriming, 6000);   // blocked even muted: give up quietly
+    music.primeTimer = setTimeout(endPriming, 6000);   // never started: give up quietly
   }
   function endPriming() {
     if (!music.priming) return;
@@ -877,10 +887,6 @@
     applyVolume();
     p.seekTo(YT_START, true);
     p.playVideo();
-    clearTimeout(music.blockTimer);
-    music.blockTimer = setTimeout(() => {   // still silent? the browser wants a tap on the video
-      if (music.want && !music.playing && !music.paused) ytBox.classList.add("blocked");
-    }, 2500);
   }
 
   function musicStart() {
@@ -897,8 +903,6 @@
   function musicStop() {
     if (!music.want) return;
     music.want = false;            // musicUpdate fades it out, then pauses
-    clearTimeout(music.blockTimer);
-    if (ytBox) ytBox.classList.remove("blocked");
     if (music.fade === 0 && music.ready && !music.failed) {   // never got going: stop right away
       music.player.pauseVideo();
     }
@@ -914,7 +918,6 @@
   // should the flowers wait for the song? (only at their very first frame)
   function musicHolding() {
     if (!MUSIC_ON || music.failed || music.paused) return false;
-    if (ytBox && ytBox.classList.contains("blocked")) return false;   // needs a tap: don't wait
     return !music.playing;
   }
 
@@ -1098,13 +1101,39 @@
     if (!MUSIC_ON || !gate) { hideSound(); begin(); return; }
     renderFrame(0);                      // the starry sky behind "tap to open"
     gate.hidden = false;
+    gateWaiting = true;
     gate.focus({ preventScroll: true });
-    gate.addEventListener("click", () => {
-      gate.classList.add("gone");
-      setTimeout(() => { gate.hidden = true; }, 500);
-      showSound();
-      begin();
-      primeMusic();
-    }, { once: true });
+    armTapCatcher();
+    gate.addEventListener("click", openGate);          // keyboard, or tapped before YouTube loaded
+    // a tap on the invisible player moves the focus into it
+    window.addEventListener("blur", () => setTimeout(() => {
+      if (gateWaiting && document.activeElement && document.activeElement.tagName === "IFRAME") openGate();
+    }, 0));
   });
+
+  function openGate() {
+    if (!gateWaiting) return;
+    gateWaiting = false;
+    const gate = document.getElementById("gate");
+    gate.classList.add("gone");
+    setTimeout(() => { gate.hidden = true; }, 500);
+    if (ytBox) ytBox.classList.remove("catch");
+    canvas.focus({ preventScroll: true });             // keys (Space, R) back to the page
+    showSound();
+    begin();
+    if (music.priming) {
+      // the player was armed; if the tap didn't start it (keyboard), start the muted buffer now
+      setTimeout(() => {
+        const st = music.player.getPlayerState();
+        if (music.priming && st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING) {
+          music.player.seekTo(YT_START, true);
+          music.player.playVideo();
+          clearTimeout(music.primeTimer);
+          music.primeTimer = setTimeout(endPriming, 6000);
+        }
+      }, 700);
+    } else {
+      primeMusic();
+    }
+  }
 })();

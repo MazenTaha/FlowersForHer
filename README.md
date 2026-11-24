@@ -58,9 +58,9 @@ until YouTube is really playing (never more than 3 s). It loops while the bouque
 and starts again with **Re-bloom**.
 
 - Browsers only allow sound after a tap, so the page opens with a little
-  **"tap to open"** screen first. If a browser still blocks it (some iPhones), a pink
-  **"tap for music ♪"** pill appears in the middle; the tap goes through to the
-  invisible player under it and starts the song. The video itself never shows.
+  **"tap to open"** screen first. The invisible player lies over that screen, so the
+  opening tap lands on it directly; that is what lets even iPhones play the song later.
+  The video itself never shows, and there is no other button to tap.
 - The top-right button mutes/unmutes; the slider next to it sets the volume (it shows
   on hover on a computer and is always visible on phones; iPhones only get mute, since
   their volume is the side buttons). The setting is remembered on that device.
