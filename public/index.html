@@ -61,6 +61,109 @@
     }
     #rebloom:active { transform: translate(-50%, 2px) scale(0.97); }
     #rebloom:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    /* "tap to open": browsers only allow music after a tap */
+    #gate {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border: 0;
+      background: transparent;
+      color: #ffd1e6;
+      font: 700 22px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: opacity 0.5s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #gate[hidden] { display: none; }
+    #gate.gone { opacity: 0; }
+    #gate .flower { font-size: 54px; animation: beat 1.6s ease-in-out infinite; }
+    #gate .hint { text-shadow: 0 0 14px rgba(255, 120, 180, 0.8); animation: glow 1.6s ease-in-out infinite; }
+    #gate:focus { outline: none; }
+    @keyframes beat {
+      0%, 100% { transform: scale(1); }
+      15% { transform: scale(1.14); }
+      30% { transform: scale(1); }
+      45% { transform: scale(1.08); }
+    }
+    @keyframes glow { 0%, 100% { opacity: 0.65; } 50% { opacity: 1; } }
+
+    /* music: mute button + volume slider, top right */
+    #sound {
+      position: fixed;
+      top: calc(14px + env(safe-area-inset-top));
+      right: calc(14px + env(safe-area-inset-right));
+      display: flex;
+      align-items: center;
+      padding: 3px;
+      border: 1.5px solid rgba(255, 158, 199, 0.75);
+      border-radius: 999px;
+      background: rgba(255, 105, 170, 0.16);
+      box-shadow: 0 0 12px rgba(255, 120, 180, 0.3);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    #sound[hidden] { display: none; }
+    #sound.show { opacity: 0.8; }
+    #sound.show:hover, #sound.show:focus-within { opacity: 1; }
+    #mute {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: #fff0f6;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #mute:hover { background: rgba(255, 158, 199, 0.25); }
+    #mute:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+    #mute svg { width: 20px; height: 20px; overflow: visible; }
+    #mute .spk { fill: currentColor; }
+    #mute .w1, #mute .w2, #mute .x { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+    #sound .x, #sound[data-level="0"] .w1, #sound[data-level="0"] .w2, #sound[data-level="1"] .w2 { display: none; }
+    #sound[data-level="0"] .x { display: inline; }
+    #volume {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 0;
+      height: 4px;
+      margin: 0;
+      border-radius: 2px;
+      background: linear-gradient(to right, #ff9ec7 var(--v, 70%), rgba(255, 255, 255, 0.25) var(--v, 70%));
+      opacity: 0;
+      cursor: pointer;
+      transition: width 0.25s ease, margin 0.25s ease, opacity 0.25s ease;
+    }
+    #sound:hover #volume, #sound:focus-within #volume { width: 84px; margin: 0 10px 0 4px; opacity: 1; }
+    @media (hover: none) {           /* phones: no hover, so the slider is always there */
+      #volume { width: 72px; margin: 0 10px 0 4px; opacity: 1; }
+    }
+    #sound.muted #volume { filter: grayscale(1); opacity: 0.5; }
+    #volume::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: #fff0f6;
+      border: 2px solid #ff6fae;
+    }
+    #volume::-moz-range-thumb {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: #fff0f6;
+      border: 2px solid #ff6fae;
+    }
+    #volume:focus { outline: none; }
+    #volume:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
+
     noscript {
       color: #f9a8d4;
       font: 16px/1.5 system-ui, sans-serif;
@@ -72,6 +175,18 @@
 <body>
   <canvas id="c" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
   <button id="rebloom" type="button">Re-bloom</button>
+  <button id="gate" type="button" hidden><span class="flower" aria-hidden="true">🌸</span><span class="hint">tap to open</span></button>
+  <div id="sound" hidden data-level="2">
+    <button id="mute" type="button" aria-label="Mute music" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path class="spk" d="M3 9h4l5-4.5v15L7 15H3z"/>
+        <path class="w1" d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/>
+        <path class="w2" d="M18.5 6.5a7.5 7.5 0 0 1 0 11"/>
+        <path class="x" d="M16 9.5l5 5M21 9.5l-5 5"/>
+      </svg>
+    </button>
+    <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Music volume">
+  </div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
   <script src="flowers.js"></script>
 </body>

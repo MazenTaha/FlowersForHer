@@ -5,7 +5,8 @@
  * away; then a 3D bouquet of lilies grows and blooms. Everything is drawn as
  * coloured ASCII characters on a <canvas>.
  *
- * URL options:  ?say=Asmaa!   ?message=For%20you   ?intro=0   ?tint=0.45   ?seed=7
+ * URL options:  ?say=Asmaa!   ?message=For%20you   ?intro=0   ?tint=0.45   ?seed=7   ?music=0
+ * Music: public/music/heartbeat.mp3 plays when the lilies start to bloom (volume: top right).
  * Keys: Space = pause, R = restart. The "Re-bloom" button regrows the flowers.
  */
 "use strict";
@@ -765,9 +766,147 @@
     ctx.putImageData(image, 0, 0);
   }
 
+  // ---------------------------------------------------------------- music
+  // The song starts (fading in) when the first lily begins to open and loops while the
+  // bouquet stays. Browsers only allow sound after a tap, so when the track exists the
+  // page first shows "tap to open". Re-bloom restarts the song with the flowers.
+  const MUSIC_ON = params.get("music") !== "0";
+  const MUSIC_SRC = params.get("music") || "music/heartbeat.mp3";
+  const MUSIC_AT = 2.6;            // bouquet seconds: the first lily starts to open
+  const FADE_IN = 1.8, FADE_OUT = 0.5;
+  const music = { data: null, ctx: null, buffer: null, out: null, src: null, gain: null,
+                  playing: false, volume: 0.7, muted: false };
+  try {
+    const s = JSON.parse(localStorage.getItem("ffh-sound") || "null");
+    if (s && typeof s.volume === "number") {
+      music.volume = Math.min(1, Math.max(0, s.volume));
+      music.muted = !!s.muted;
+    }
+  } catch (e) { /* storage blocked: defaults are fine */ }
+
+  // download the file while the page waits for the tap (decoding needs the audio context)
+  function fetchMusic() {
+    if (!MUSIC_ON || !window.fetch || !(window.AudioContext || window.webkitAudioContext)) {
+      return Promise.resolve(false);
+    }
+    return fetch(MUSIC_SRC).then((res) => {
+      if (!res.ok) return false;
+      music.data = res.arrayBuffer();
+      music.data.catch(() => {});
+      return true;
+    }).catch(() => false);
+  }
+
+  // called from the tap: create/unlock the audio context, then decode the track
+  function unlockMusic() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+    const ctx = music.ctx = new AC();
+    music.out = ctx.createGain();
+    music.out.connect(ctx.destination);
+    applyVolume(true);
+    ctx.resume().catch(() => {});
+    music.data
+      .then((ab) => new Promise((ok, bad) => ctx.decodeAudioData(ab, ok, bad)))
+      .then((buf) => { music.buffer = buf; })
+      .catch(() => hideSound());
+  }
+
+  function musicStart() {
+    if (!music.buffer || music.playing) return;
+    const ctx = music.ctx, now = ctx.currentTime;
+    const src = ctx.createBufferSource(), gain = ctx.createGain();
+    src.buffer = music.buffer;
+    src.loop = true;
+    src.connect(gain);
+    gain.connect(music.out);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(1, now + FADE_IN);
+    src.start(now);
+    music.src = src; music.gain = gain; music.playing = true;
+  }
+
+  function musicStop() {
+    if (!music.playing) return;
+    const now = music.ctx.currentTime, src = music.src, gain = music.gain;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0, now + FADE_OUT);
+    src.stop(now + FADE_OUT + 0.05);
+    src.onended = () => gain.disconnect();
+    music.src = null; music.gain = null; music.playing = false;
+  }
+
+  function musicPause(pause) {
+    if (!music.ctx) return;
+    (pause ? music.ctx.suspend() : music.ctx.resume()).catch(() => {});
+  }
+
+  // ------------------------------------------------------------- sound control
+  const soundBox = document.getElementById("sound");
+  const muteBtn = document.getElementById("mute");
+  const volSlider = document.getElementById("volume");
+
+  function applyVolume(instant) {
+    const silent = music.muted || music.volume === 0;
+    if (music.out) {
+      const g = silent ? 0 : music.volume * music.volume;     // squared: feels even to the ear
+      const now = music.ctx.currentTime;
+      if (instant) music.out.gain.setValueAtTime(g, now);
+      else music.out.gain.setTargetAtTime(g, now, 0.04);
+    }
+    if (!soundBox) return;
+    const pct = Math.round(music.volume * 100);
+    volSlider.value = String(pct);
+    volSlider.style.setProperty("--v", `${pct}%`);
+    soundBox.dataset.level = silent ? "0" : music.volume < 0.5 ? "1" : "2";
+    soundBox.classList.toggle("muted", silent);
+    muteBtn.setAttribute("aria-label", silent ? "Unmute music" : "Mute music");
+    muteBtn.setAttribute("aria-pressed", silent ? "true" : "false");
+  }
+
+  function saveVolume() {
+    try {
+      localStorage.setItem("ffh-sound", JSON.stringify({ volume: music.volume, muted: music.muted }));
+    } catch (e) { /* not saved, that's ok */ }
+  }
+
+  function showSound() {
+    if (!soundBox) return;
+    soundBox.hidden = false;
+    requestAnimationFrame(() => soundBox.classList.add("show"));
+  }
+  function hideSound() {
+    if (soundBox) soundBox.hidden = true;
+  }
+
+  if (soundBox) {
+    muteBtn.addEventListener("click", () => {
+      if (music.muted || music.volume === 0) {
+        music.muted = false;
+        if (music.volume === 0) music.volume = 0.5;
+      } else {
+        music.muted = true;
+      }
+      applyVolume(); saveVolume();
+    });
+    volSlider.addEventListener("input", () => {
+      music.volume = Math.min(1, Math.max(0, volSlider.value / 100));
+      music.muted = false;
+      applyVolume();
+    });
+    volSlider.addEventListener("change", saveVolume);
+    applyVolume(true);
+  }
+
   // ---------------------------------------------------------------- loop
   const bouquet = makeBouquet(SEED);
-  let t = 0, last = performance.now(), paused = false;
+  let t = 0, last = performance.now(), paused = false, started = false;
+
+  function setPaused(p) {
+    paused = p;
+    musicPause(p);
+  }
 
   // "Re-bloom" button: shows once the lilies are open, regrows the bouquet (no cat replay)
   const rebloomBtn = document.getElementById("rebloom");
@@ -781,7 +920,7 @@
   }
   function rebloom() {
     t = INTRO ? INTRO_END : 0;
-    paused = false;
+    setPaused(false);
     setButton(false);
   }
   if (rebloomBtn) rebloomBtn.addEventListener("click", rebloom);
@@ -792,11 +931,13 @@
     if (INTRO && time < INTRO_END) {
       drawIntro(time);
       setButton(false);
+      musicStop();
     } else {
       const tb = INTRO ? time - INTRO_END : time;
       drawBouquet(bouquet, tb);
       drawMessage(tb);
       setButton(tb > BLOOMED_AT);
+      if (tb >= MUSIC_AT) musicStart(); else musicStop();
     }
     compose();
   }
@@ -812,22 +953,45 @@
   let resizeTimer = 0;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(layout, 150);
+    resizeTimer = setTimeout(() => { layout(); if (!started) renderFrame(0); }, 150);
   });
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space") { paused = !paused; e.preventDefault(); }
-    if (e.key === "r" || e.key === "R") t = 0;
+    if (!started) return;
+    if (e.code === "Space" && !(e.target instanceof HTMLButtonElement || e.target instanceof HTMLInputElement)) {
+      setPaused(!paused); e.preventDefault();
+    }
+    if (e.key === "r" || e.key === "R") { t = 0; setPaused(false); }
+  });
+  // the animation stops in a background tab, so the song waits too
+  document.addEventListener("visibilitychange", () => {
+    if (!paused) musicPause(document.hidden);
   });
 
   // debugging / screenshots: window.renderAt(seconds) draws one frame and pauses
-  window.renderAt = (sec) => { paused = true; t = sec; renderFrame(t); };
+  window.renderAt = (sec) => { setPaused(true); t = sec; renderFrame(t); };
+
+  function begin() {
+    started = true;
+    last = performance.now();
+    requestAnimationFrame(tick);
+  }
 
   const fontReady = document.fonts && document.fonts.load
     ? Promise.race([document.fonts.load(`700 120px "Comic Neue"`), new Promise((r) => setTimeout(r, 2500))])
     : Promise.resolve();
-  fontReady.catch(() => {}).then(() => {
+  Promise.all([fontReady.catch(() => {}), fetchMusic()]).then(([, hasMusic]) => {
     layout();
-    last = performance.now();
-    requestAnimationFrame(tick);
+    const gate = document.getElementById("gate");
+    if (!hasMusic || !gate) { hideSound(); begin(); return; }
+    renderFrame(0);                      // the starry sky behind "tap to open"
+    gate.hidden = false;
+    gate.focus({ preventScroll: true });
+    gate.addEventListener("click", () => {
+      gate.classList.add("gone");
+      setTimeout(() => { gate.hidden = true; }, 500);
+      unlockMusic();
+      showSound();
+      begin();
+    }, { once: true });
   });
 })();

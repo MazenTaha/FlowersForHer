@@ -42,9 +42,24 @@ Options go in the URL:
 | `intro=0`           | `?intro=0`                   | skip the cat                        |
 | `tint`              | `?tint=0`                    | pure ASCII on black                 |
 | `seed`              | `?seed=3`                    | a different bouquet                 |
+| `music`             | `?music=0`                   | no music (or a path to another file) |
 
 Once the lilies have bloomed, a **Re-bloom** button appears at the bottom; it
 regrows the bouquet from the start (without replaying the cat).
+
+### Music
+
+Put the song at `public/music/heartbeat.mp3` (Joe Hisaishi, "Heartbeat", from
+*Howl's Moving Castle*). It isn't included in this repo: add your own copy.
+It fades in when the first lily starts to open, loops while the bouquet stays,
+and starts again with **Re-bloom**.
+
+- Browsers only allow sound after a tap, so when the file exists the page opens
+  with a little **"tap to open"** screen first.
+- The top-right button mutes/unmutes; the slider next to it sets the volume
+  (it shows on hover on a computer and is always visible on phones). The
+  setting is remembered on that device.
+- With no file, the site works exactly as before: no tap screen and no sound button.
 
 Keys: Space = pause, R = restart.
 
