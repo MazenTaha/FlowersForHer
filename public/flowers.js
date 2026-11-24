@@ -105,6 +105,13 @@
       sr += Math.sin(b.theta[i]); sz += Math.cos(b.theta[i]);
       b.cr[i] = sr / (NU - 1); b.cz[i] = sz / (NU - 1);
     }
+    // per-row / per-column petal factors that never change (computed once, not per frame)
+    b.Rp = Float64Array.from(b.u, (u) => Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, 0.85))), 0.75));
+    b.Wp = Float64Array.from(b.u, (u) => Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, 0.65))), 0.85));
+    b.cth = Float64Array.from(b.theta, (th) => Math.cos(th));
+    b.sth = Float64Array.from(b.theta, (th) => Math.sin(th));
+    b.cdv = Float64Array.from(b.v, (v) => Math.cos(v * (Math.PI / 6) * 1.04));
+    b.sdv = Float64Array.from(b.v, (v) => Math.sin(v * (Math.PI / 6) * 1.04));
     const alt = [1, 0.8, 1, 0.8, 1, 0.8];
     b.wf = alt.map((a) => 1.8 - a);
     b.lf = alt.map((a) => 0.96 + 0.04 * (a - 0.8) / 0.2);
@@ -113,6 +120,15 @@
     for (let f = 0; f < F; f++) for (let k = 0; k < 6; k++) for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
       const u = b.u[i], v = b.v[j];
       b.speckMask[((f * 6 + k) * NU + i) * NV + j] = rnd() < 0.09 && u > 0.1 && u < 0.5 && Math.abs(v) < 0.6 ? 1 : 0;
+    }
+    // petal colours (pale edges, throat) per flower, row and column: also fixed
+    b.pcol = new Float64Array(F * NU * NV * 3);
+    for (let f = 0; f < F; f++) for (let i = 0; i < NU; i++) {
+      const tb = Math.pow(clamp(1 - b.u[i] / 0.32, 0, 1), 1.4);
+      for (let j = 0; j < NV; j++) {
+        const em = EM[j], q = ((f * NU + i) * NV + j) * 3;
+        for (let c = 0; c < 3; c++) b.pcol[q + c] = (b.base[f][c] * (1 - em) + b.edge[f][c] * em) * (1 - tb) + b.throat[f][c] * tb;
+      }
     }
 
     // leaves
@@ -237,31 +253,36 @@
         const L = B.size[f] * hs;
         const helper = Math.abs(ax[2]) < 0.9 ? [0, 0, 1] : [1, 0, 0];
         const e1 = norm3(cross3(ax, helper)), e2 = cross3(ax, e1);
-        const base = B.base[f], edge = B.edge[f], thr = B.throat[f], spk = B.speck[f];
+        const spk = B.speck[f];
         const gmix = (1 - e) * 0.35;
         for (let k = 0; k < 6; k++) {
           const phi = B.petalRot[f] + k * Math.PI / 3, cp = Math.cos(phi), sp = Math.sin(phi);
           const rk = [cp * e1[0] + sp * e2[0], cp * e1[1] + sp * e2[1], cp * e1[2] + sp * e2[2]];
           const tk = [-sp * e1[0] + cp * e2[0], -sp * e1[1] + cp * e2[1], -sp * e1[2] + cp * e2[2]];
           const wf = B.wf[k], lf = B.lf[k], rf = B.rf[k];
+          const LR = L * 0.31 * rf, LW = L * 0.25 * wf;
+          const g1 = 1 - gmix, bg0 = BUD_GREEN[0] * gmix, bg1 = BUD_GREEN[1] * gmix, bg2 = BUD_GREEN[2] * gmix;
+          const sp0 = spk[0] * g1 + bg0, sp1 = spk[1] * g1 + bg1, sp2 = spk[2] * g1 + bg2;
+          const mrow = (f * 6 + k) * NU;
           for (let i = 0; i < NU; i++) {
-            const u = B.u[i], th = B.theta[i], cth = Math.cos(th), sth = Math.sin(th);
-            const R = L * 0.31 * rf * Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, 0.85))), 0.75);
-            const wdt = L * 0.25 * wf * Math.pow(Math.max(0, Math.sin(Math.PI * Math.pow(u, 0.65))), 0.85);
-            const tb = Math.pow(clamp(1 - u / 0.32, 0, 1), 1.4);
+            const u = B.u[i], cth = B.cth[i], sth = B.sth[i];
+            const R = LR * B.Rp[i], wdt = LW * B.Wp[i], Cc = L * 1.05 * lf * u;
+            const Aoi = L * lf * (0.06 + B.cr[i]), Coi = L * lf * B.cz[i];
+            const mi = (mrow + i) * NV, pi = (f * NU + i) * NV;
             for (let j = 0; j < NV; j++) {
-              const v = B.v[j], dv = v * (Math.PI / 6) * 1.04;
-              const Ac = R * Math.cos(dv), Bc = R * Math.sin(dv), Cc = L * 1.05 * lf * u;
+              const v = B.v[j];
+              const Ac = R * B.cdv[j], Bc = R * B.sdv[j];
               const gr = 0.3 * wdt * v * v;
-              const Ao = L * lf * (0.06 + B.cr[i]) - cth * gr, Bo = v * wdt, Co = L * lf * B.cz[i] + sth * gr;
+              const Ao = Aoi - cth * gr, Bo = v * wdt, Co = Coi + sth * gr;
               const A = Ac + (Ao - Ac) * e, Bb = Bc + (Bo - Bc) * e, C = Cc + (Co - Cc) * e;
               const q = (i * NV + j) * 3;
-              const speck = B.speckMask[((f * 6 + k) * NU + i) * NV + j];
-              const em = EM[j];
-              for (let c = 0; c < 3; c++) {
-                GP[q + c] = hd[c] + A * rk[c] + Bb * tk[c] + C * ax[c];
-                const col = speck ? spk[c] : (base[c] * (1 - em) + edge[c] * em) * (1 - tb) + thr[c] * tb;
-                GC[q + c] = col * (1 - gmix) + BUD_GREEN[c] * gmix;
+              GP[q] = hd[0] + A * rk[0] + Bb * tk[0] + C * ax[0];
+              GP[q + 1] = hd[1] + A * rk[1] + Bb * tk[1] + C * ax[1];
+              GP[q + 2] = hd[2] + A * rk[2] + Bb * tk[2] + C * ax[2];
+              if (B.speckMask[mi + j]) { GC[q] = sp0; GC[q + 1] = sp1; GC[q + 2] = sp2; }
+              else {
+                const pc = (pi + j) * 3;
+                GC[q] = B.pcol[pc] * g1 + bg0; GC[q + 1] = B.pcol[pc + 1] * g1 + bg1; GC[q + 2] = B.pcol[pc + 2] * g1 + bg2;
               }
             }
           }
@@ -377,6 +398,7 @@
   const LIGHT = norm3([-0.35, 0.5, 0.8]);
   const HALF = norm3([LIGHT[0], LIGHT[1], LIGHT[2] + 1]);
 
+  const ZS = new Float32Array(CAP);      // depth of every point (reused every frame)
   function drawBouquet(B, t) {
     bouquetPoints(B, t);
     const ay = 0.22 * Math.sin(TAU * t / 20), axr = 0.16;
@@ -385,7 +407,6 @@
     const M = [cy, 0, sy, sx * sy, cx, -sx * cy, -cx * sy, sx, cx * cy];
     const scale = Math.min(rows / 4.9, cols / (3.9 * aspect));
     ZB.fill(-1e9); WIN.fill(-1);
-    const ZS = new Float32Array(np);
     for (let i = 0; i < np; i++) {
       const k = i * 3, X = PP[k], Y = PP[k + 1] - 2.2, Z = PP[k + 2];
       const x = M[0] * X + M[1] * Y + M[2] * Z, y = M[3] * X + M[4] * Y + M[5] * Z, z = M[6] * X + M[7] * Y + M[8] * Z;
@@ -421,8 +442,11 @@
         let m = 0.55 + 0.75 * br;
         // outline: a different, nearer object right next to this cell
         const z = ZB[c], id = IG[c];
-        const nb = (q) => IG[q] >= 0 && IG[q] !== id && ZB[q] > z + 0.04;
-        if ((cc + 1 < cols && nb(c + 1)) || (cc > 0 && nb(c - 1)) || (r + 1 < rows && nb(c + cols)) || (r > 0 && nb(c - cols))) {
+        let q;
+        if ((cc + 1 < cols && (q = IG[c + 1]) >= 0 && q !== id && ZB[c + 1] > z + 0.04) ||
+            (cc > 0 && (q = IG[c - 1]) >= 0 && q !== id && ZB[c - 1] > z + 0.04) ||
+            (r + 1 < rows && (q = IG[c + cols]) >= 0 && q !== id && ZB[c + cols] > z + 0.04) ||
+            (r > 0 && (q = IG[c - cols]) >= 0 && q !== id && ZB[c - cols] > z + 0.04)) {
           ri = Math.max(ri - 3, 0); m *= 0.55;
         }
         setCell(c, RAMP_IDX[ri], PC[k] * m, PC[k + 1] * m, PC[k + 2] * m);
@@ -707,7 +731,7 @@
   // ================================================================ display
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
-  let gw = 6, gh = 11, atlas = null, atlasChars = 0, image = null, bgLevel = Math.round(TINT * 256);
+  let gw = 6, gh = 11, atlas = null, atlasChars = 0, image = null, image32 = null, bgLevel = Math.round(TINT * 256);
 
   function buildAtlas(fontPx) {
     const mono = `700 ${fontPx}px Consolas, Menlo, "DejaVu Sans Mono", "Courier New", monospace`;
@@ -722,10 +746,10 @@
     c2.font = mono; c2.fillStyle = "#fff"; c2.textBaseline = "alphabetic"; c2.textAlign = "center";
     CHARS.forEach((ch, i) => { if (ch !== " ") c2.fillText(ch, i * gw + gw / 2, Math.round(gh * 0.8)); });
     const d = c2.getImageData(0, 0, cv.width, cv.height).data;
-    atlas = new Uint8Array(CHARS.length * gw * gh);
+    atlas = new Uint16Array(CHARS.length * gw * gh);   // glyph brightness with the tint already mixed in
     for (let i = 0; i < CHARS.length; i++)
       for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++)
-        atlas[(i * gh + y) * gw + x] = d[(y * cv.width + i * gw + x) * 4];
+        atlas[(i * gh + y) * gw + x] = bgLevel + ((d[(y * cv.width + i * gw + x) * 4] * (256 - bgLevel)) >> 8);
     atlasChars = CHARS.length;
   }
 
@@ -741,24 +765,24 @@
     aspect = gh / gw;
     resizeGrid(c, r);
     image = ctx.createImageData(canvas.width, canvas.height);
+    image32 = new Uint32Array(image.data.buffer);
     textCache.clear();
   }
 
   function compose() {
     if (atlasChars !== CHARS.length) buildAtlas(Math.round(gh / 1.12));
-    const W = canvas.width, data = image.data;
-    new Uint32Array(data.buffer).fill(0xff000000);
-    const gsz = gw * gh, bg = bgLevel;
+    const W = canvas.width, px = image32;      // one 32-bit write per pixel (RGBA, little-endian)
+    px.fill(0xff000000);
+    const gsz = gw * gh;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const k = r * cols + c, R = RGB[k * 3], G = RGB[k * 3 + 1], Bc = RGB[k * 3 + 2];
         if ((R | G | Bc) === 0) continue;
-        const go = IDX[k] * gsz;
-        let p = ((r * gh) * W + c * gw) * 4;
-        for (let y = 0; y < gh; y++, p += (W - gw) * 4) {
-          for (let x = 0; x < gw; x++, p += 4) {
-            const w = bg + ((atlas[go + y * gw + x] * (256 - bg)) >> 8);
-            data[p] = (R * w) >> 8; data[p + 1] = (G * w) >> 8; data[p + 2] = (Bc * w) >> 8;
+        let a = IDX[k] * gsz, p = r * gh * W + c * gw;
+        for (let y = 0; y < gh; y++, p += W - gw) {
+          for (let x = 0; x < gw; x++, p++, a++) {
+            const w = atlas[a];
+            px[p] = 0xff000000 | (((Bc * w) >> 8) << 16) | (((G * w) >> 8) << 8) | ((R * w) >> 8);
           }
         }
       }
@@ -771,10 +795,10 @@
   // the flowers: the song is buffered (muted) while the cat walks, and the bouquet's first
   // frame waits until YouTube really is playing, so sound and growth begin on the same
   // frame. It loops while the bouquet stays and restarts with Re-bloom.
-  // Browsers only allow sound after a tap, so the page first shows "tap to open". Over that
-  // screen lies the invisible YouTube player, blown up so its middle covers the whole
-  // window: the tap that opens the page lands on the player itself (and starts it muted),
-  // which is what convinces even strict browsers (iPhones) to allow the music later.
+  // Browsers only allow sound after a tap, so the page first shows "tap to open". iPhones
+  // are strictest: the player must be *started during that tap*, or the song is refused
+  // later. So "tap to open" only appears once the player has loaded, and the tap itself
+  // starts the player (muted, just to buffer); YouTube then plays when the flowers start.
   // The YouTube video itself is never shown, and there is no other button to tap.
   const MUSIC_ON = params.get("music") !== "0";
   const YT_ID = params.get("yt") || "WOD_R7Yu8vw";
@@ -801,20 +825,15 @@
 
   const ytBox = document.getElementById("yt");
   let gateWaiting = false;               // "tap to open" is on screen
-
-  // gate on screen and player ready: let the player catch the opening tap (muted)
-  function armTapCatcher() {
-    if (!gateWaiting || !music.ready || music.failed) return;
-    music.priming = true;
-    applyVolume();                       // mutes (see applyVolume)
-    ytBox.classList.add("catch");
-  }
+  let gateLoading = false;               // ...but not tappable yet: the player is still loading
+  let lastForcedPause = 0;
 
   function musicFailed() {
     music.failed = true;
     music.want = false;
     if (ytBox) ytBox.hidden = true;
     hideSound();
+    gateReady();                         // no music: let the page open anyway
   }
 
   function loadYouTube() {
@@ -828,13 +847,12 @@
           onReady: () => {
             music.ready = true;
             music.sentVol = -1; music.sentMute = null;
-            if (gateWaiting) armTapCatcher();
+            if (gateWaiting) gateReady();
             else if (music.want && !music.paused) playFromStart();
             else if (started) primeMusic();
           },
           onStateChange: (e) => {
             const S = YT.PlayerState;
-            if (gateWaiting && (e.data === S.PLAYING || e.data === S.BUFFERING)) openGate();   // the opening tap
             if (e.data === S.PLAYING) {
               if (music.priming) {
                 endPriming();
@@ -924,6 +942,12 @@
   // every frame: fade in/out and send the volume to YouTube when it changes
   function musicUpdate(dt) {
     if (!music.ready || music.failed) return;
+    const st = music.player.getPlayerState();
+    if (music.want && !music.priming && st === YT.PlayerState.PLAYING) music.playing = true;   // missed event
+    if (!music.want && !music.priming && music.fade === 0 && st === YT.PlayerState.PLAYING) {
+      const now = performance.now();               // playing when it shouldn't (a pause got lost)
+      if (now - lastForcedPause > 500) { music.player.pauseVideo(); lastForcedPause = now; }
+    }
     if (music.want) {
       if (music.playing) music.fade = Math.min(1, music.fade + dt / FADE_IN);
     } else if (music.fade > 0) {
@@ -1102,14 +1126,21 @@
     renderFrame(0);                      // the starry sky behind "tap to open"
     gate.hidden = false;
     gateWaiting = true;
+    if (!music.ready && !music.failed) {
+      gateLoading = true;                // "tap to open" appears once YouTube has loaded
+      gate.classList.add("loading");
+      setTimeout(gateReady, 10000);      // YouTube very slow or blocked: open without music
+    }
     gate.focus({ preventScroll: true });
-    armTapCatcher();
-    gate.addEventListener("click", openGate);          // keyboard, or tapped before YouTube loaded
-    // a tap on the invisible player moves the focus into it
-    window.addEventListener("blur", () => setTimeout(() => {
-      if (gateWaiting && document.activeElement && document.activeElement.tagName === "IFRAME") openGate();
-    }, 0));
+    gate.addEventListener("click", () => { if (!gateLoading) openGate(); });
   });
+
+  function gateReady() {
+    if (!gateLoading) return;
+    gateLoading = false;
+    const gate = document.getElementById("gate");
+    if (gate) gate.classList.remove("loading");
+  }
 
   function openGate() {
     if (!gateWaiting) return;
@@ -1117,23 +1148,8 @@
     const gate = document.getElementById("gate");
     gate.classList.add("gone");
     setTimeout(() => { gate.hidden = true; }, 500);
-    if (ytBox) ytBox.classList.remove("catch");
-    canvas.focus({ preventScroll: true });             // keys (Space, R) back to the page
+    primeMusic();                        // right inside the tap: this is what unlocks iPhones
     showSound();
     begin();
-    if (music.priming) {
-      // the player was armed; if the tap didn't start it (keyboard), start the muted buffer now
-      setTimeout(() => {
-        const st = music.player.getPlayerState();
-        if (music.priming && st !== YT.PlayerState.PLAYING && st !== YT.PlayerState.BUFFERING) {
-          music.player.seekTo(YT_START, true);
-          music.player.playVideo();
-          clearTimeout(music.primeTimer);
-          music.primeTimer = setTimeout(endPriming, 6000);
-        }
-      }, 700);
-    } else {
-      primeMusic();
-    }
   }
 })();

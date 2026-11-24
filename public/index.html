@@ -25,7 +25,6 @@
     }
     canvas {
       display: block;
-      outline: none;
       image-rendering: auto;
     }
     #rebloom {
@@ -85,6 +84,9 @@
     #gate .flower { font-size: 54px; animation: beat 1.6s ease-in-out infinite; }
     #gate .hint { text-shadow: 0 0 14px rgba(255, 120, 180, 0.8); animation: glow 1.6s ease-in-out infinite; }
     #gate:focus { outline: none; }
+    #gate .hint { transition: opacity 0.4s ease; }
+    #gate.loading { cursor: default; }
+    #gate.loading .hint { opacity: 0; animation: none; }   /* "tap to open" once the music is ready */
     @keyframes beat {
       0%, 100% { transform: scale(1); }
       15% { transform: scale(1.14); }
@@ -173,9 +175,7 @@
     #volume:focus { outline: none; }
     #volume:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
 
-    /* the YouTube player that plays the song: always invisible. While "tap to open" is
-       showing it is blown up (3x the window, centred) and sits on top, so the opening tap
-       lands on the player itself; its title and logo corners stay off-screen. */
+    /* the YouTube player that plays the song: always invisible, never catches taps */
     #yt {
       position: fixed;
       left: 50%;
@@ -188,7 +188,6 @@
     }
     #yt[hidden] { display: none; }
     #yt iframe { display: block; width: 100%; height: 100%; border: 0; }
-    #yt.catch { width: 300vw; height: 300vh; margin: -150vh 0 0 -150vw; pointer-events: auto; }
 
     noscript {
       color: #f9a8d4;
@@ -199,7 +198,7 @@
   </style>
 </head>
 <body>
-  <canvas id="c" tabindex="-1" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
+  <canvas id="c" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
   <button id="rebloom" type="button">Re-bloom</button>
   <button id="gate" type="button" hidden><span class="flower" aria-hidden="true">🌸</span><span class="hint">tap to open</span></button>
   <div id="sound" hidden data-level="2">
