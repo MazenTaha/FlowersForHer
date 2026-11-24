@@ -42,24 +42,26 @@ Options go in the URL:
 | `intro=0`           | `?intro=0`                   | skip the cat                        |
 | `tint`              | `?tint=0`                    | pure ASCII on black                 |
 | `seed`              | `?seed=3`                    | a different bouquet                 |
-| `music`             | `?music=0`                   | no music (or a path to another file) |
+| `music=0`           | `?music=0`                   | no music                            |
+| `yt`                | `?yt=WOD_R7Yu8vw`            | which YouTube video plays           |
 
 Once the lilies have bloomed, a **Re-bloom** button appears at the bottom; it
 regrows the bouquet from the start (without replaying the cat).
 
 ### Music
 
-Put the song at `public/music/heartbeat.mp3` (Joe Hisaishi, "Heartbeat", from
-*Howl's Moving Castle*). It isn't included in this repo: add your own copy.
-It fades in when the first lily starts to open, loops while the bouquet stays,
-and starts again with **Re-bloom**.
+"Heartbeat" (Joe Hisaishi, *Howl's Moving Castle*) plays from YouTube
+(https://youtu.be/WOD_R7Yu8vw) through YouTube's own player, a small window in the
+bottom-left corner (YouTube doesn't allow hidden players). It fades in when the first
+lily starts to open, loops while the bouquet stays, and starts again with **Re-bloom**.
 
-- Browsers only allow sound after a tap, so when the file exists the page opens
-  with a little **"tap to open"** screen first.
-- The top-right button mutes/unmutes; the slider next to it sets the volume
-  (it shows on hover on a computer and is always visible on phones). The
-  setting is remembered on that device.
-- With no file, the site works exactly as before: no tap screen and no sound button.
+- Browsers only allow sound after a tap, so the page opens with a little
+  **"tap to open"** screen first. If a browser still blocks it (some iPhones),
+  a "tap here for music" hint appears over the player; one tap on the video starts it.
+- The top-right button mutes/unmutes; the slider next to it sets the volume (it shows
+  on hover on a computer and is always visible on phones; iPhones only get mute, since
+  their volume is the side buttons). The setting is remembered on that device.
+- `?yt=VIDEO_ID` plays a different YouTube video; `?music=0` turns the music off.
 
 Keys: Space = pause, R = restart.
 

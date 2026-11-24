@@ -148,6 +148,7 @@
       #volume { width: 72px; margin: 0 10px 0 4px; opacity: 1; }
     }
     #sound.muted #volume { filter: grayscale(1); opacity: 0.5; }
+    #sound.no-slider #volume { display: none; }
     #volume::-webkit-slider-thumb {
       -webkit-appearance: none;
       width: 14px; height: 14px;
@@ -163,6 +164,49 @@
     }
     #volume:focus { outline: none; }
     #volume:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
+
+    /* the YouTube player that plays the song (YouTube needs it visible, at least 200x200) */
+    #yt {
+      position: fixed;
+      left: calc(14px + env(safe-area-inset-left));
+      bottom: calc(14px + env(safe-area-inset-bottom));
+      width: 200px;
+      height: 200px;
+      border: 2px solid #ff9ec7;
+      border-radius: 14px;
+      background: #000;
+      box-shadow: 0 0 16px rgba(255, 120, 180, 0.4);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(8px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    #yt[hidden] { display: none; }
+    #yt.show { opacity: 1; pointer-events: auto; transform: none; }
+    #yt iframe { display: block; width: 100%; height: 100%; border: 0; border-radius: 12px; }
+    #yt .tap {
+      position: absolute;
+      left: 0; right: 0; bottom: calc(100% + 8px);
+      padding: 7px 4px;
+      border-radius: 999px;
+      background: #ff5fa2;
+      box-shadow: 0 0 14px rgba(255, 120, 180, 0.6);
+      color: #fff;
+      font: 700 14px/1.2 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      text-align: center;
+      pointer-events: none;           /* the tap goes through to the video */
+      display: none;
+      animation: nudge 1.4s ease-in-out infinite;
+    }
+    @keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    #yt.blocked .tap { display: block; }
+
+    /* phones: Re-bloom moves to the right so it never sits on the player */
+    @media (max-width: 560px) {
+      #rebloom { left: auto; right: calc(14px + env(safe-area-inset-right)); transform: translateY(12px); }
+      #rebloom.show { transform: none; }
+      #rebloom:active { transform: translateY(2px) scale(0.97); }
+    }
 
     noscript {
       color: #f9a8d4;
@@ -187,6 +231,7 @@
     </button>
     <input id="volume" type="range" min="0" max="100" step="1" value="70" aria-label="Music volume">
   </div>
+  <div id="yt"><div id="yt-player"></div><div class="tap">tap here for music ♪</div></div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
   <script src="flowers.js"></script>
 </body>

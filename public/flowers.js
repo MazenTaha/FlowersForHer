@@ -5,8 +5,8 @@
  * away; then a 3D bouquet of lilies grows and blooms. Everything is drawn as
  * coloured ASCII characters on a <canvas>.
  *
- * URL options:  ?say=Asmaa!   ?message=For%20you   ?intro=0   ?tint=0.45   ?seed=7   ?music=0
- * Music: public/music/heartbeat.mp3 plays when the lilies start to bloom (volume: top right).
+ * URL options:  ?say=Asmaa!   ?message=For%20you   ?intro=0   ?tint=0.45   ?seed=7   ?music=0   ?yt=VIDEO_ID
+ * Music: "Heartbeat" (YouTube player, bottom left) plays when the lilies start to bloom (volume: top right).
  * Keys: Space = pause, R = restart. The "Re-bloom" button regrows the flowers.
  */
 "use strict";
@@ -767,15 +767,24 @@
   }
 
   // ---------------------------------------------------------------- music
-  // The song starts (fading in) when the first lily begins to open and loops while the
-  // bouquet stays. Browsers only allow sound after a tap, so when the track exists the
-  // page first shows "tap to open". Re-bloom restarts the song with the flowers.
+  // "Heartbeat" plays through YouTube's own player, shown as a small window in the
+  // bottom-left corner (YouTube doesn't allow hidden players). It fades in when the first
+  // lily starts to open, loops while the bouquet stays and restarts with Re-bloom.
+  // Browsers only allow sound after a tap, so the page first shows "tap to open"; if a
+  // browser still blocks it (some iPhones), a hint asks for one tap on the video.
   const MUSIC_ON = params.get("music") !== "0";
-  const MUSIC_SRC = params.get("music") || "music/heartbeat.mp3";
+  const YT_ID = params.get("yt") || "WOD_R7Yu8vw";
   const MUSIC_AT = 2.6;            // bouquet seconds: the first lily starts to open
   const FADE_IN = 1.8, FADE_OUT = 0.5;
-  const music = { data: null, ctx: null, buffer: null, out: null, src: null, gain: null,
-                  playing: false, volume: 0.7, muted: false };
+  const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const music = {
+    player: null, ready: false, failed: false,
+    want: false,        // the bouquet wants music now
+    playing: false,     // YouTube says it's playing
+    fade: 0, sentVol: -1, sentMute: null, blockTimer: 0,
+    volume: 0.7, muted: false, paused: false,
+  };
   try {
     const s = JSON.parse(localStorage.getItem("ffh-sound") || "null");
     if (s && typeof s.volume === "number") {
@@ -784,62 +793,96 @@
     }
   } catch (e) { /* storage blocked: defaults are fine */ }
 
-  // download the file while the page waits for the tap (decoding needs the audio context)
-  function fetchMusic() {
-    if (!MUSIC_ON || !window.fetch || !(window.AudioContext || window.webkitAudioContext)) {
-      return Promise.resolve(false);
-    }
-    return fetch(MUSIC_SRC).then((res) => {
-      if (!res.ok) return false;
-      music.data = res.arrayBuffer();
-      music.data.catch(() => {});
-      return true;
-    }).catch(() => false);
+  const ytBox = document.getElementById("yt");
+
+  function musicFailed() {
+    music.failed = true;
+    music.want = false;
+    if (ytBox) ytBox.hidden = true;
+    hideSound();
   }
 
-  // called from the tap: create/unlock the audio context, then decode the track
-  function unlockMusic() {
-    const AC = window.AudioContext || window.webkitAudioContext;
-    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
-    const ctx = music.ctx = new AC();
-    music.out = ctx.createGain();
-    music.out.connect(ctx.destination);
-    applyVolume(true);
-    ctx.resume().catch(() => {});
-    music.data
-      .then((ab) => new Promise((ok, bad) => ctx.decodeAudioData(ab, ok, bad)))
-      .then((buf) => { music.buffer = buf; })
-      .catch(() => hideSound());
+  function loadYouTube() {
+    if (!MUSIC_ON || !ytBox) return;
+    window.onYouTubeIframeAPIReady = () => {
+      music.player = new YT.Player("yt-player", {
+        width: 200, height: 200, videoId: YT_ID,
+        playerVars: { playsinline: 1, controls: 0, disablekb: 1, rel: 0, fs: 0,
+                      iv_load_policy: 3, origin: location.origin },
+        events: {
+          onReady: () => {
+            music.ready = true;
+            music.sentVol = -1; music.sentMute = null;
+            if (music.want && !music.paused) playFromStart();
+          },
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.PLAYING) {
+              music.playing = true;
+              clearTimeout(music.blockTimer);
+              ytBox.classList.remove("blocked");
+            } else if (e.data === YT.PlayerState.ENDED) {
+              music.playing = false;
+              if (music.want && !music.paused) playFromStart(true);   // loop
+            } else if (e.data === YT.PlayerState.PAUSED) {
+              music.playing = false;
+            }
+          },
+          onError: musicFailed,
+        },
+      });
+    };
+    const s = document.createElement("script");
+    s.src = "https://www.youtube.com/iframe_api";
+    s.onerror = musicFailed;
+    document.head.appendChild(s);
+  }
+
+  function playFromStart(looping) {
+    const p = music.player;
+    if (!music.ready || music.failed) return;
+    if (!looping) music.fade = 0;
+    applyVolume();
+    p.seekTo(0, true);
+    p.playVideo();
+    clearTimeout(music.blockTimer);
+    music.blockTimer = setTimeout(() => {   // still silent? the browser wants a tap on the video
+      if (music.want && !music.playing && !music.paused) ytBox.classList.add("blocked");
+    }, 2500);
   }
 
   function musicStart() {
-    if (!music.buffer || music.playing) return;
-    const ctx = music.ctx, now = ctx.currentTime;
-    const src = ctx.createBufferSource(), gain = ctx.createGain();
-    src.buffer = music.buffer;
-    src.loop = true;
-    src.connect(gain);
-    gain.connect(music.out);
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(1, now + FADE_IN);
-    src.start(now);
-    music.src = src; music.gain = gain; music.playing = true;
+    if (music.want || music.failed) return;
+    music.want = true;
+    if (ytBox) ytBox.classList.add("show");
+    if (!music.paused) playFromStart();
   }
 
   function musicStop() {
-    if (!music.playing) return;
-    const now = music.ctx.currentTime, src = music.src, gain = music.gain;
-    gain.gain.cancelScheduledValues(now);
-    gain.gain.setValueAtTime(gain.gain.value, now);
-    gain.gain.linearRampToValueAtTime(0, now + FADE_OUT);
-    src.stop(now + FADE_OUT + 0.05);
-    src.onended = () => gain.disconnect();
-    music.src = null; music.gain = null; music.playing = false;
+    if (!music.want) return;
+    music.want = false;            // musicUpdate fades it out, then pauses
+    clearTimeout(music.blockTimer);
+    if (ytBox) ytBox.classList.remove("blocked");
   }
 
   function musicPause(pause) {
-    if (!music.ctx) return;
-    (pause ? music.ctx.suspend() : music.ctx.resume()).catch(() => {});
+    music.paused = pause;
+    if (!music.ready || music.failed || !music.want) return;
+    if (pause) music.player.pauseVideo();
+    else music.player.playVideo();
+  }
+
+  // every frame: fade in/out and send the volume to YouTube when it changes
+  function musicUpdate(dt) {
+    if (!music.ready || music.failed) return;
+    if (music.want) music.fade = Math.min(1, music.fade + dt / FADE_IN);
+    else if (music.fade > 0) {
+      music.fade = Math.max(0, music.fade - dt / FADE_OUT);
+      if (music.fade === 0) {
+        music.player.pauseVideo();
+        if (ytBox) ytBox.classList.remove("show");
+      }
+    }
+    applyVolume();
   }
 
   // ------------------------------------------------------------- sound control
@@ -847,13 +890,15 @@
   const muteBtn = document.getElementById("mute");
   const volSlider = document.getElementById("volume");
 
-  function applyVolume(instant) {
+  function applyVolume() {
     const silent = music.muted || music.volume === 0;
-    if (music.out) {
-      const g = silent ? 0 : music.volume * music.volume;     // squared: feels even to the ear
-      const now = music.ctx.currentTime;
-      if (instant) music.out.gain.setValueAtTime(g, now);
-      else music.out.gain.setTargetAtTime(g, now, 0.04);
+    if (music.ready && !music.failed) {
+      const vol = Math.round(100 * music.fade * music.volume * music.volume);   // squared: feels even
+      if (vol !== music.sentVol) { music.player.setVolume(vol); music.sentVol = vol; }
+      if (silent !== music.sentMute) {             // iPhones ignore setVolume but obey mute
+        if (silent) music.player.mute(); else music.player.unMute();
+        music.sentMute = silent;
+      }
     }
     if (!soundBox) return;
     const pct = Math.round(music.volume * 100);
@@ -872,7 +917,7 @@
   }
 
   function showSound() {
-    if (!soundBox) return;
+    if (!soundBox || music.failed) return;
     soundBox.hidden = false;
     requestAnimationFrame(() => soundBox.classList.add("show"));
   }
@@ -881,6 +926,7 @@
   }
 
   if (soundBox) {
+    if (IOS) soundBox.classList.add("no-slider");    // iPhone volume is the hardware buttons
     muteBtn.addEventListener("click", () => {
       if (music.muted || music.volume === 0) {
         music.muted = false;
@@ -896,7 +942,7 @@
       applyVolume();
     });
     volSlider.addEventListener("change", saveVolume);
-    applyVolume(true);
+    applyVolume();
   }
 
   // ---------------------------------------------------------------- loop
@@ -931,13 +977,13 @@
     if (INTRO && time < INTRO_END) {
       drawIntro(time);
       setButton(false);
-      musicStop();
+      if (started) musicStop();
     } else {
       const tb = INTRO ? time - INTRO_END : time;
       drawBouquet(bouquet, tb);
       drawMessage(tb);
       setButton(tb > BLOOMED_AT);
-      if (tb >= MUSIC_AT) musicStart(); else musicStop();
+      if (started) { if (tb >= MUSIC_AT) musicStart(); else musicStop(); }
     }
     compose();
   }
@@ -947,6 +993,7 @@
     last = now;
     if (!paused) t += dt;
     renderFrame(t);
+    musicUpdate(dt);
     requestAnimationFrame(tick);
   }
 
@@ -962,13 +1009,15 @@
     }
     if (e.key === "r" || e.key === "R") { t = 0; setPaused(false); }
   });
-  // the animation stops in a background tab, so the song waits too
-  document.addEventListener("visibilitychange", () => {
-    if (!paused) musicPause(document.hidden);
-  });
 
   // debugging / screenshots: window.renderAt(seconds) draws one frame and pauses
   window.renderAt = (sec) => { setPaused(true); t = sec; renderFrame(t); };
+  window.musicState = () => ({
+    ready: music.ready, failed: music.failed, want: music.want, playing: music.playing,
+    fade: +music.fade.toFixed(2), volume: music.sentVol, muted: music.sentMute,
+    youtube: music.ready ? music.player.getPlayerState() : null,
+    at: music.ready ? +music.player.getCurrentTime().toFixed(1) : null,
+  });
 
   function begin() {
     started = true;
@@ -976,20 +1025,20 @@
     requestAnimationFrame(tick);
   }
 
+  loadYouTube();
   const fontReady = document.fonts && document.fonts.load
     ? Promise.race([document.fonts.load(`700 120px "Comic Neue"`), new Promise((r) => setTimeout(r, 2500))])
     : Promise.resolve();
-  Promise.all([fontReady.catch(() => {}), fetchMusic()]).then(([, hasMusic]) => {
+  fontReady.catch(() => {}).then(() => {
     layout();
     const gate = document.getElementById("gate");
-    if (!hasMusic || !gate) { hideSound(); begin(); return; }
+    if (!MUSIC_ON || !gate) { hideSound(); begin(); return; }
     renderFrame(0);                      // the starry sky behind "tap to open"
     gate.hidden = false;
     gate.focus({ preventScroll: true });
     gate.addEventListener("click", () => {
       gate.classList.add("gone");
       setTimeout(() => { gate.hidden = true; }, 500);
-      unlockMusic();
       showSound();
       begin();
     }, { once: true });
