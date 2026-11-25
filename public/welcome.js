@@ -61,15 +61,27 @@
     h("img", { src: "bouquet.webp", alt: "A bouquet of ASCII lilies", draggable: false }),
     h("span", { className: "caption" }, "Flowers for her"));
 
-  // placeholder cards for what's coming next: a skeleton picture and text lines
-  const upcoming = (lines) => h("div", { className: "paper upcoming", "aria-label": "Upcoming" },
-    h("span", { className: "sk sk-pic" }),
+  // placeholder cards for what's coming next: a skeleton picture with a little icon, a title
+  // with a "soon" badge, two skeleton lines and an "in the making" progress bar
+  const svg = (paths) => h("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", fill: "none", stroke: "currentColor",
+    strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" }, ...paths.map((d) => h("path", { d })));
+  const GIFT = ["M4 11h16v9H4z", "M3 7.5h18V11H3z", "M12 7.5V20", "M12 7.5C10.5 4 7 4 7.2 6.2 7.4 7.5 12 7.5 12 7.5z",
+    "M12 7.5c1.5-3.5 5-3.5 4.8-1.3-.2 1.3-4.8 1.3-4.8 1.3z"];
+  const LETTER = ["M3.5 6h17v12h-17z", "M3.5 6.5l8.5 6.5 8.5-6.5", "M12 17.2c-1.3-1-2.6-1.9-2.6-3 0-.7.6-1.2 1.2-1.2.6 0 1 .3 1.4.8.4-.5.8-.8 1.4-.8.6 0 1.2.5 1.2 1.2 0 1.1-1.3 2-2.6 3z"];
+  const upcoming = (icon, lines, progress) => h("div", { className: "paper upcoming", "aria-label": "Upcoming, coming soon" },
+    h("span", { className: "sk up-pic" },
+      h("span", { className: "up-icon" }, svg(icon)),
+      h("span", { className: "up-spark s1", "aria-hidden": "true" }, "✦"),
+      h("span", { className: "up-spark s2", "aria-hidden": "true" }, "✦")),
     h("span", { className: "up-row" },
       h("span", { className: "up-title" }, "Upcoming"),
       h("span", { className: "up-badge" }, "soon")),
-    ...lines.map((w) => h("span", { className: "sk sk-line", style: { width: w } })));
-  const soon1 = upcoming(["92%", "74%"]);
-  const soon2 = upcoming(["84%", "58%"]);
+    ...lines.map((w) => h("span", { className: "sk sk-line", style: { width: w } })),
+    h("span", { className: "up-foot" },
+      h("span", { className: "up-bar" }, h("span", { style: { width: progress } })),
+      h("span", { className: "up-heart", "aria-hidden": "true" }, "♥")));
+  const soon1 = upcoming(GIFT, ["90%", "66%"], "62%");
+  const soon2 = upcoming(LETTER, ["82%", "54%"], "35%");
 
   // wide screens: the papers fan out in a row with the flowers in the middle;
   // narrow screens: they stand up in a stack with the flowers in front

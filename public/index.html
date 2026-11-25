@@ -159,7 +159,7 @@
       white-space: nowrap;
     }
     /* "Upcoming" placeholder cards: skeleton blocks with a soft shimmer */
-    .upcoming { padding: 7% 7% 0; gap: calc(7px * var(--folder-scale)); }
+    .upcoming { padding: 7% 7% 9%; gap: calc(5px * var(--folder-scale)); }
     .sk {
       display: block;
       border-radius: calc(3px * var(--folder-scale));
@@ -167,10 +167,40 @@
       animation: shimmer 1.8s ease-in-out infinite paused;
     }
     .folder-root[data-open] .sk { animation-play-state: running; }   /* only while you can see them */
-    .sk-pic { width: 100%; aspect-ratio: 1.15; margin-bottom: calc(2px * var(--folder-scale)); }
-    .sk-line { height: calc(5px * var(--folder-scale)); border-radius: 999px; }
-    .up-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-    .up-title { font-size: calc(11.5px * var(--folder-scale)); color: #b98ba0; }
+    .sk-line { flex: none; height: calc(4.5px * var(--folder-scale)); border-radius: 999px; }
+    .up-pic {
+      position: relative;
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      aspect-ratio: 1.5;
+      margin-bottom: calc(3px * var(--folder-scale));
+      background-image: linear-gradient(100deg, rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 65%),
+                        linear-gradient(135deg, #fbe3ee, #efe3f8);
+      background-size: 300% 100%, 100% 100%;
+      box-shadow: inset 0 0 0 1px rgba(214, 150, 185, 0.18);
+    }
+    .up-icon {
+      display: grid;
+      place-items: center;
+      width: 34%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale)) rgba(214, 120, 165, 0.18);
+      color: #e27aa9;
+    }
+    .up-icon svg { width: 58%; height: 58%; }
+    .up-spark { position: absolute; color: #f2a9c9; line-height: 1; }
+    .up-spark.s1 { top: 14%; left: 13%; font-size: calc(8px * var(--folder-scale)); }
+    .up-spark.s2 { bottom: 15%; right: 14%; font-size: calc(6px * var(--folder-scale)); opacity: 0.8; }
+    .up-row { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+    .up-title { font-size: calc(11.5px * var(--folder-scale)); color: #b0708f; }
+    .up-foot { flex: none; display: flex; align-items: center; gap: calc(5px * var(--folder-scale)); margin-top: auto; }
+    .up-bar { flex: 1; height: calc(4px * var(--folder-scale)); border-radius: 999px; background: #f3e4eb; overflow: hidden; }
+    .up-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffb3d2, #ff6fae); }
+    .up-heart { color: #ff8fbf; font-size: calc(8px * var(--folder-scale)); line-height: 1; }
     .up-badge {
       padding: calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale));
       border-radius: 999px;
