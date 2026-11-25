@@ -94,7 +94,8 @@
       return () => { listeners.delete(onChange); window.removeEventListener("resize", onResize); clearTimeout(timer); };
     }, []);
 
-    const hint = launched ? "" : !open ? "tap the folder" : canLaunch() ? "tap the flowers" : "one moment…";
+    // only "tap the folder" while it's closed; once open, nothing (unless the music is still loading)
+    const hint = launched ? "" : !open ? "tap the folder" : canLaunch() ? "" : "one moment…";
     return h(React.Fragment, null,
       h(Folder, {
         items: view.order.map((content) => ({ content })),
