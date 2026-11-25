@@ -1117,6 +1117,9 @@
                 endPriming();
                 if (!music.want) return;             // buffered: wait silently for the flowers
               }
+              // the song belongs to the flowers page only: if anything else starts it
+              // (lock-screen / headphone / media keys) while the folder is showing, stop it
+              if (!started || leaving || !music.want) { music.player.pauseVideo(); return; }
               music.playing = true;
             } else if (e.data === S.ENDED) {
               music.playing = false;
@@ -1251,7 +1254,9 @@
     requestAnimationFrame(() => soundBox.classList.add("show"));
   }
   function hideSound() {
-    if (soundBox) soundBox.hidden = true;
+    if (!soundBox) return;
+    soundBox.classList.remove("show");
+    soundBox.hidden = true;
   }
 
   if (soundBox) {
@@ -1296,6 +1301,7 @@
     rebloomBtn.tabIndex = show ? 0 : -1;
   }
   function rebloom() {
+    if (!started || leaving) return;     // only on the flowers page
     t = B0;
     held = 0;
     setPaused(false);
@@ -1315,7 +1321,7 @@
       const tb = INTRO ? time - INTRO_END : time;
       drawBouquet(bouquet, tb);
       drawMessage(tb);
-      setButton(tb > BLOOMED_AT);
+      setButton(!leaving && tb > BLOOMED_AT);
       if (started) musicStart();
     }
     compose();
@@ -1324,7 +1330,8 @@
   function tick(now) {
     const dt = Math.min(0.25, (now - last) / 1000);   // keeps real speed on slow phones, no jump after a tab switch
     last = now;
-    if (!paused) {
+    if (!running) { ticking = false; return; }       // back at the folder: the loop rests
+    if (!paused && !leaving) {
       let nt = t + dt;
       // the flowers' first frame waits for the song, so both start together
       if (started && t <= B0 && nt >= B0) {
@@ -1369,66 +1376,169 @@
     at: music.ready ? +music.player.getCurrentTime().toFixed(1) : null,
   });
 
+  let running = false, ticking = false, leaving = false;
   function begin() {
     started = true;
+    running = true;
     last = performance.now();
-    requestAnimationFrame(tick);
+    if (!ticking) { ticking = true; requestAnimationFrame(tick); }
   }
 
+  // ------------------------------------------------------------- two pages
+  // Home is the folder (welcome.js). "Flowers for her" is its own page at #flowers: the cat,
+  // the bouquet, Re-bloom, the sound control, the home button, and the music, which only
+  // ever plays there. A direct link to #flowers opens it with "tap to open" (phones need a
+  // tap before music); the browser's back/forward buttons move between the two pages.
   const welcome = window.ffhWelcome || null;   // the folder screen, if it loaded
+  const FLOWERS = "#flowers";
+  const onFlowersPage = () => location.hash === FLOWERS;
+  const homeUrl = () => location.pathname + location.search;
+  const gate = document.getElementById("gate");
+  const homeBtn = document.getElementById("home");
+  let cameFromHome = false;              // #flowers was pushed by tapping the polaroid
+  let gateShown = false;
+
+  function showHome() {
+    if (!homeBtn || !welcome) return;
+    homeBtn.hidden = false;
+    requestAnimationFrame(() => homeBtn.classList.add("show"));
+  }
+  function hideHome() {
+    if (!homeBtn) return;
+    homeBtn.classList.remove("show");
+    homeBtn.hidden = true;
+  }
+  function showGate() {
+    if (!gate) return;
+    gateShown = true;
+    gateWaiting = true;
+    gate.classList.remove("gone");
+    gate.classList.toggle("loading", gateLoading);
+    gate.hidden = false;
+    gate.focus({ preventScroll: true });
+  }
+  function hideGate() {
+    if (!gate) return;
+    gateShown = false;
+    gate.hidden = true;
+  }
+
+  // the song is silenced and rewound: nothing is primed, nothing is wanted
+  function stopMusic() {
+    clearTimeout(music.primeTimer);
+    music.priming = false; music.primed = false;
+    music.want = false; music.fade = 0; music.playing = false;
+    music.paused = false; paused = false;
+    if (music.ready && !music.failed) music.player.pauseVideo();   // (no seekTo: on a fresh player it would start playing)
+    applyVolume();
+  }
+
+  function enterFlowers() {              // the flowers page starts (after a tap)
+    if (MUSIC_ON) showSound(); else hideSound();
+    showHome();
+    begin();
+  }
+
+  // leave the flowers page: fade the bouquet and the song out, then show the folder
+  function leaveFlowers() {
+    if (leaving) return;
+    if (!started) {                      // still at "tap to open" (or not started at all)
+      hideGate();
+      stopMusic();
+      gateWaiting = true;
+      if (welcome) welcome.show();
+      return;
+    }
+    leaving = true;
+    started = false;                     // the frames stop asking for the song...
+    musicStop();                         // ...and it fades out (musicUpdate), then pauses
+    setButton(false);
+    hideSound();
+    hideHome();
+    canvas.classList.add("leaving");
+    setTimeout(() => {
+      running = false;
+      leaving = false;
+      cameFromHome = false;
+      stopMusic();
+      t = 0; held = 0;
+      renderFrame(0);                    // just the stars again
+      canvas.classList.remove("leaving");
+      gateWaiting = true;
+      if (onFlowersPage()) { showGate(); return; }   // went "forward" again meanwhile
+      if (welcome) welcome.show();
+    }, 550);
+  }
+
+  // show whichever page the address says
+  function route() {
+    if (onFlowersPage()) {
+      if (started || leaving) return;
+      if (welcome) welcome.hide();
+      if (!MUSIC_ON) { gateWaiting = false; enterFlowers(); return; }   // no music: no tap needed
+      showGate();
+    } else if (started || leaving || gateShown) {
+      leaveFlowers();
+    }
+  }
+
+  function goHome() {                    // the home button
+    if (cameFromHome) { history.back(); return; }   // popstate -> route() -> leaveFlowers()
+    history.pushState(null, "", homeUrl());
+    leaveFlowers();
+  }
+  if (homeBtn) homeBtn.addEventListener("click", goHome);
+  if (gate) gate.addEventListener("click", () => { if (!gateLoading) openGate(); });
+  window.addEventListener("popstate", () => { if (welcome) route(); });
+
   loadYouTube();
   const fontReady = document.fonts && document.fonts.load
     ? Promise.race([document.fonts.load(`700 120px "Comic Neue"`), new Promise((r) => setTimeout(r, 2500))])
     : Promise.resolve();
   fontReady.catch(() => {}).then(() => {
     layout();
-    // the folder opening screen (welcome.js): tapping its "Flowers for her" paper opens the page
+    renderFrame(0);                      // the starry sky behind the folder / "tap to open"
+    gateWaiting = true;
+    if (MUSIC_ON && !music.ready && !music.failed) {
+      gateLoading = true;                // taps open the page once YouTube has loaded
+      setTimeout(gateReady, 10000);      // YouTube very slow or blocked: open without music
+    }
     if (welcome) {
-      renderFrame(0);                    // the starry sky behind the folder
-      gateWaiting = true;
-      if (MUSIC_ON && !music.ready && !music.failed) {
-        gateLoading = true;              // the paper opens the page once YouTube has loaded
-        setTimeout(gateReady, 10000);    // YouTube very slow or blocked: open without music
-      }
+      // the folder's "Flowers for her" polaroid opens the flowers page
       welcome.connect(() => {
         if (gateLoading || !gateWaiting) return null;
         gateWaiting = false;
         primeMusic();                    // right inside the tap: this is what unlocks iPhones
-        return () => { if (MUSIC_ON) showSound(); else hideSound(); begin(); };
+        history.pushState({ ffh: "flowers" }, "", FLOWERS);
+        cameFromHome = true;
+        return () => {                   // the folder has faded away
+          if (!onFlowersPage()) { cameFromHome = false; stopMusic(); gateWaiting = true; welcome.show(); return; }
+          enterFlowers();
+        };
       });
       welcome.setReady(!gateLoading);
+      route();
       return;
     }
-    const gate = document.getElementById("gate");
+    // no folder (?folder=0, or React didn't load): the plain "tap to open"
     if (!MUSIC_ON || !gate) { hideSound(); begin(); return; }
-    renderFrame(0);                      // the starry sky behind "tap to open"
-    gate.hidden = false;
-    gateWaiting = true;
-    if (!music.ready && !music.failed) {
-      gateLoading = true;                // "tap to open" appears once YouTube has loaded
-      gate.classList.add("loading");
-      setTimeout(gateReady, 10000);      // YouTube very slow or blocked: open without music
-    }
-    gate.focus({ preventScroll: true });
-    gate.addEventListener("click", () => { if (!gateLoading) openGate(); });
+    showGate();
   });
 
   function gateReady() {
     if (!gateLoading) return;
     gateLoading = false;
-    if (welcome) { welcome.setReady(true); return; }
-    const gate = document.getElementById("gate");
+    if (welcome) welcome.setReady(true);
     if (gate) gate.classList.remove("loading");
   }
 
   function openGate() {
-    if (!gateWaiting) return;
+    if (!gateWaiting || !gateShown) return;
     gateWaiting = false;
-    const gate = document.getElementById("gate");
+    gateShown = false;
     gate.classList.add("gone");
-    setTimeout(() => { gate.hidden = true; }, 500);
+    setTimeout(() => { if (!gateShown) gate.hidden = true; }, 500);
     primeMusic();                        // right inside the tap: this is what unlocks iPhones
-    showSound();
-    begin();
+    enterFlowers();
   }
 })();

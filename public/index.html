@@ -182,6 +182,35 @@
     @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
     @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
 
+    /* home: back to the folder, top left */
+    #home {
+      position: fixed;
+      top: calc(14px + env(safe-area-inset-top));
+      left: calc(14px + env(safe-area-inset-left));
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1.5px solid rgba(255, 158, 199, 0.75);
+      border-radius: 50%;
+      background: rgba(255, 105, 170, 0.16);
+      box-shadow: 0 0 12px rgba(255, 120, 180, 0.3);
+      backdrop-filter: blur(3px);
+      color: #fff0f6;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.6s ease, background-color 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #home[hidden] { display: none; }
+    #home.show { opacity: 0.8; }
+    #home.show:hover, #home.show:focus-visible { opacity: 1; background: rgba(255, 158, 199, 0.3); }
+    #home:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    #home svg { width: 19px; height: 19px; }
+    #c { transition: opacity 0.5s ease; }
+    #c.leaving { opacity: 0; }
+
     /* music: mute button + volume slider, top right */
     #sound {
       position: fixed;
@@ -288,6 +317,12 @@
   <canvas id="c" role="img" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
   <button id="rebloom" type="button">Re-bloom</button>
   <button id="gate" type="button" hidden><span class="flower" aria-hidden="true">🌸</span><span class="hint">tap to open</span></button>
+  <button id="home" type="button" hidden aria-label="Back to the folder" title="Home">
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3.5 11 12 4l8.5 7"/>
+      <path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>
+    </svg>
+  </button>
   <div id="sound" hidden data-level="2">
     <button id="mute" type="button" aria-label="Mute music" aria-pressed="false">
       <svg viewBox="0 0 24 24" aria-hidden="true">

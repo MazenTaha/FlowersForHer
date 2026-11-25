@@ -6,6 +6,7 @@
 //   connect(fn)    flowers.js hands over its launcher. fn() runs inside the tap; it returns
 //                  start() to call once the folder has faded away, or null if not ready yet
 //   setReady(ok)   flowers.js says whether the page can open yet (the music is still loading)
+//   show()/hide()  home / the flowers page (#flowers): put the folder back (fresh, closed) or away
 // ?folder=0 skips this screen (the plain "tap to open" is used instead).
 (() => {
   "use strict";
@@ -29,6 +30,12 @@
   window.ffhWelcome = {
     connect(fn) { launcher = fn; notify(); },
     setReady(ok) { ready = !!ok; notify(); },
+    show() { if (!root) mount(); },        // back home: a fresh folder
+    hide() {                               // the flowers page was opened by its address
+      if (!root) return;
+      root.unmount(); root = null;
+      box.hidden = true; box.classList.remove("gone");
+    },
   };
   const canLaunch = () => !!launcher && ready && !launched;
 
@@ -41,8 +48,9 @@
     setTimeout(() => {                       // let the paper zoom up, then fade into the page
       box.classList.add("gone");
       setTimeout(() => {
-        root.unmount();
-        box.remove();
+        if (root) { root.unmount(); root = null; }   // gone completely while the flowers play
+        box.hidden = true;
+        box.classList.remove("gone");
         start();
       }, 700);
     }, 450);
@@ -104,7 +112,12 @@
       h("p", { className: "welcome-hint", "aria-live": "polite" }, hint));
   }
 
-  box.hidden = false;
-  const root = window.ReactDOM.createRoot(box);
-  root.render(h(Welcome));
+  let root = null;
+  function mount() {                         // a fresh folder: closed, papers dropping in
+    launched = false;
+    box.hidden = false;
+    root = window.ReactDOM.createRoot(box);
+    root.render(h(Welcome));
+  }
+  if (location.hash !== "#flowers") mount();   // a link straight to the flowers page skips the folder
 })();

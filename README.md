@@ -53,7 +53,16 @@ Options go in the URL:
 | `folder=0`          | `?folder=0`                  | skip the folder ("tap to open")     |
 
 Once the lilies have bloomed, a **Re-bloom** button appears at the bottom; it
-regrows the bouquet from the start (without replaying the cat).
+regrows the bouquet from the start (without replaying the cat). The small **home**
+button in the top-left corner fades the flowers and the song out and brings the folder
+back.
+
+The folder and the flowers are two pages: home (the folder) and **`#flowers`** (cat,
+bouquet, Re-bloom, sound control, home button). The music belongs to the flowers page
+only: leaving it stops the song, and if anything starts it while the folder is showing
+(phone lock-screen or headphone controls, media keys) it is paused straight away. The
+browser's back/forward buttons move between the two pages, and a link straight to
+`…/#flowers` opens the flowers page with a "tap to open" (phones need a tap before music).
 
 ### Music
 
