@@ -1299,7 +1299,7 @@ void main() {
             }
           }
           busy = integrate(item.x, target.x, omega, damping, dt) || busy;
-          busy = integrate(item.y, target.y, omega, damping, dt) || busy;
+          let moving = integrate(item.y, target.y, omega, damping, dt);
           if (!geometry.book && item.layer === 'inside') {
             const tilt = (item.r.value * Math.PI) / 180;
             const reach =
@@ -1308,8 +1308,15 @@ void main() {
             if (item.y.value > floor) {
               item.y.value = floor;
               if (item.y.velocity > 0) item.y.velocity *= -0.25;
+              // (added) a tilted paper's resting spot can sit a hair below this floor; then it is
+              // resting on the floor, not still moving, so let the animation loop stop
+              if (target.y >= floor && Math.abs(item.y.velocity) < 0.5) {
+                item.y.velocity = 0;
+                moving = false;
+              }
             }
           }
+          busy = moving || busy;
           busy = integrate(item.z, target.z, itemOmega, zeta, dt) || busy;
           busy = integrate(item.r, target.r, omega, damping, dt) || busy;
           busy = integrate(item.ry, target.ry, itemOmega, zeta, dt) || busy;
@@ -1508,8 +1515,9 @@ void main() {
         });
       };
 
+      let alive = true;                  // (added) false once unmounted: late wake-ups do nothing
       const wake = () => {
-        if (!state.raf) state.raf = requestAnimationFrame(frame);
+        if (alive && !state.raf) state.raf = requestAnimationFrame(frame);
       };
 
       const beginIntro = () => {
@@ -1752,7 +1760,9 @@ void main() {
       wake();
 
       return () => {
+        alive = false;
         cancelAnimationFrame(state.raf);
+        state.raf = 0;
         root.removeEventListener('pointermove', onMove);
         root.removeEventListener('pointerleave', onLeave);
         root.removeEventListener('pointerdown', onDown);

@@ -164,8 +164,9 @@
       display: block;
       border-radius: calc(3px * var(--folder-scale));
       background: linear-gradient(100deg, #f3e4ea 35%, #fbf1f5 50%, #f3e4ea 65%) 0 0 / 300% 100%;
-      animation: shimmer 1.8s ease-in-out infinite;
+      animation: shimmer 1.8s ease-in-out infinite paused;
     }
+    .folder-root[data-open] .sk { animation-play-state: running; }   /* only while you can see them */
     .sk-pic { width: 100%; aspect-ratio: 1.15; margin-bottom: calc(2px * var(--folder-scale)); }
     .sk-line { height: calc(5px * var(--folder-scale)); border-radius: 999px; }
     .up-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
