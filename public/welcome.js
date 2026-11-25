@@ -57,9 +57,19 @@
   }
 
   // ---------------------------------------------------------------- the papers
+  // the one real card: the bouquet, its name with a "new" badge, a little note, and the song
   const flowers = h("div", { className: "paper polaroid" },
-    h("img", { src: "bouquet.webp", alt: "A bouquet of ASCII lilies", draggable: false }),
-    h("span", { className: "caption" }, "Flowers for her"));
+    h("span", { className: "fl-pic" },
+      h("img", { src: "bouquet.webp", alt: "A bouquet of ASCII lilies", draggable: false }),
+      h("span", { className: "up-spark s1", "aria-hidden": "true" }, "✦"),
+      h("span", { className: "up-spark s2", "aria-hidden": "true" }, "✦")),
+    h("span", { className: "up-row" },
+      h("span", { className: "up-title fl-title" }, "Flowers for her"),
+      h("span", { className: "up-badge fl-badge" }, "new")),
+    h("span", { className: "fl-desc" }, "A little bouquet of lilies, blooming just for you"),
+    h("span", { className: "up-foot fl-foot" },
+      h("span", { className: "fl-song" }, "♪ Heartbeat"),
+      h("span", { className: "up-heart", "aria-hidden": "true" }, "<3")));
 
   // placeholder cards for what's coming next: a skeleton picture with a little icon, a title
   // with a "soon" badge, two skeleton lines and an "in the making" progress bar
@@ -79,7 +89,7 @@
     ...lines.map((w) => h("span", { className: "sk sk-line", style: { width: w } })),
     h("span", { className: "up-foot" },
       h("span", { className: "up-bar" }, h("span", { style: { width: progress } })),
-      h("span", { className: "up-heart", "aria-hidden": "true" }, "♥")));
+      h("span", { className: "up-heart", "aria-hidden": "true" }, "<3")));
   const soon1 = upcoming(GIFT, ["90%", "66%"], "62%");
   const soon2 = upcoming(LETTER, ["82%", "54%"], "35%");
 
@@ -112,8 +122,8 @@
       h(Folder, {
         items: view.order.map((content) => ({ content })),
         label: LABEL,
-        color: "#4a8cff",
-        paperColor: "#fffaf3",
+        color: "#3A506B",
+        paperColor: "#FBF1E4",
         layout: view.layout,
         size: view.size,
         tabPosition: "right",

@@ -868,21 +868,21 @@
       if (!inside(c, r)) continue;
       const edge = !(inside(c - 1, r) && inside(c + 1, r) && inside(c, r - 1) && inside(c, r + 1))
         || r === 0 || c === 0 || r === rows - 1 || c === cols - 1;
-      if (edge) setCell(r * cols + c, rim, 255, 165, 200);
-      else setCell(r * cols + c, fill, 255, 255, 255);
+      if (edge) setCell(r * cols + c, rim, 217, 119, 6);             // amber rim (#D97706)
+      else setCell(r * cols + c, fill, 251, 241, 228);              // light peach inside, like the papers (#FBF1E4)
     }
     if (k > 0.85) {
       const top = Math.round(by - th / 2), left = Math.round(bx - tw / 2);
       if (!tm) {
         for (let j = 0; j < SAY.length; j++) {
           const r = top, c = left + j;
-          if (r >= 0 && r < rows && c >= 0 && c < cols) setCell(r * cols + c, charIndex(SAY[j]), 225, 35, 115);
+          if (r >= 0 && r < rows && c >= 0 && c < cols) setCell(r * cols + c, charIndex(SAY[j]), 28, 37, 65);
         }
       } else {
         for (let r = 0; r < tm.th; r++) for (let c = 0; c < tm.tw; c++) {
           if (!tm.mask[r * tm.tw + c]) continue;
           const rr = r + top, cc = c + left;
-          if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) setCell(rr * cols + cc, rim, 225, 35, 115);
+          if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) setCell(rr * cols + cc, rim, 28, 37, 65);   // navy letters (#1C2541)
         }
       }
     }

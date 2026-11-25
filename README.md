@@ -2,9 +2,9 @@
 
 An animated ASCII lily bouquet website.
 
-It opens on a little pink folder labelled **"For Asmaa"**. Tap it and three papers come
-out: a polaroid preview of the bouquet captioned **"Flowers for her"**, and two
-**"Upcoming"** placeholder cards (skeleton picture and lines, a "soon" badge). Tapping that polaroid opens the page. (The folder is the React Bits
+It opens on a little blue folder labelled **"For Asmaa"**. Tap it and three papers come
+out: the **"Flowers for her"** card (a peek at the bouquet, a "new" badge, a little note and the song), and two
+**"Upcoming"** placeholder cards (skeleton picture and lines, a "soon" badge). Tapping the Flowers card opens the page. (The folder is the React Bits
 `<Folder />` component, in `public/folder.js` + `folder.css`; React itself loads from a CDN.
 If React can't load, the page falls back to a plain "tap to open" screen.)
 

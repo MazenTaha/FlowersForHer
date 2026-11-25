@@ -18,7 +18,11 @@
   <link rel="preload" href="bouquet.webp" as="image">
   <link rel="stylesheet" href="folder.css">
   <style>
-    :root { color-scheme: dark; }
+    :root {
+      color-scheme: dark;
+      /* the palette: everything but the flowers */
+      --night: #0B132B; --navy: #1C2541; --slate: #3A506B; --sky: #5BC0DE; --peach: #F4D6B0; --amber: #D97706;
+    }
     html, body {
       margin: 0;
       height: 100%;
@@ -41,13 +45,13 @@
       bottom: calc(20px + env(safe-area-inset-bottom));
       transform: translate(-50%, 12px);
       padding: 10px 26px;
-      border: 2px solid #ff9ec7;
+      border: 2px solid var(--sky);
       border-radius: 999px;
-      background: rgba(255, 105, 170, 0.22);
-      color: #fff0f6;
+      background: rgba(28, 37, 65, 0.6);
+      color: var(--peach);
       font: 700 18px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
       letter-spacing: 0.5px;
-      box-shadow: 0 0 18px rgba(255, 120, 180, 0.45);
+      box-shadow: 0 0 18px rgba(91, 192, 222, 0.35);
       backdrop-filter: blur(3px);
       cursor: pointer;
       opacity: 0;
@@ -64,11 +68,11 @@
                   background-color 0.2s ease, box-shadow 0.2s ease;
     }
     #rebloom:hover {
-      background: rgba(255, 105, 170, 0.4);
-      box-shadow: 0 0 26px rgba(255, 120, 180, 0.7);
+      background: rgba(58, 80, 107, 0.75);
+      box-shadow: 0 0 26px rgba(91, 192, 222, 0.55);
     }
     #rebloom:active { transform: translate(-50%, 2px) scale(0.97); }
-    #rebloom:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    #rebloom:focus-visible { outline: 2px solid var(--peach); outline-offset: 3px; }
     /* "tap to open": browsers only allow music after a tap */
     #gate {
       position: fixed;
@@ -80,7 +84,7 @@
       gap: 10px;
       border: 0;
       background: transparent;
-      color: #ffd1e6;
+      color: var(--peach);
       font: 700 22px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
       letter-spacing: 0.5px;
       cursor: pointer;
@@ -90,7 +94,7 @@
     #gate[hidden] { display: none; }
     #gate.gone { opacity: 0; }
     #gate .flower { font-size: 54px; animation: beat 1.6s ease-in-out infinite; }
-    #gate .hint { text-shadow: 0 0 14px rgba(255, 120, 180, 0.8); animation: glow 1.6s ease-in-out infinite;
+    #gate .hint { text-shadow: 0 0 14px rgba(91, 192, 222, 0.8); animation: glow 1.6s ease-in-out infinite;
                   transition: opacity 0.4s ease; }
     #gate:focus { outline: none; }
     #gate.loading { cursor: default; }
@@ -123,10 +127,10 @@
     .welcome-hint {
       min-height: 1.2em;
       margin: 0;
-      color: #ffd1e6;
+      color: var(--peach);
       font: 700 20px/1.2 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
       letter-spacing: 0.5px;
-      text-shadow: 0 0 14px rgba(255, 120, 180, 0.8);
+      text-shadow: 0 0 14px rgba(91, 192, 222, 0.8);
       animation: glow 1.6s ease-in-out infinite;
     }
     .paper {
@@ -137,36 +141,71 @@
       box-sizing: border-box;
       font-family: "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
       font-weight: 700;
-      color: #a8336a;
+      color: var(--navy);
     }
-    .polaroid { padding: 7% 7% 0; }
-    .polaroid img {
+    /* "Flowers for her": the real card. Same shape as the Upcoming ones (picture, title and
+       badge, two lines, a footer), but with the bouquet, a little note and the song */
+    .polaroid { padding: 7% 7% 9%; gap: calc(5px * var(--folder-scale)); }
+    .fl-pic {
+      position: relative;
+      flex: none;
       display: block;
       width: 100%;
-      aspect-ratio: 1;
-      object-fit: cover;
-      border-radius: calc(2px * var(--folder-scale));
+      aspect-ratio: 1.5;
+      margin-bottom: calc(3px * var(--folder-scale));
+      overflow: hidden;
+      border-radius: calc(3px * var(--folder-scale));
       background: #000;
+      box-shadow: inset 0 0 0 1px rgba(58, 80, 107, 0.14);
+    }
+    .fl-pic img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 50% 42%;
       pointer-events: none;
       -webkit-user-drag: none;
     }
-    .polaroid .caption {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: calc(12.5px * var(--folder-scale));
+    .fl-pic .up-spark { color: #fff4e6; opacity: 0.9; }
+    .up-title.fl-title { font-size: calc(10.4px * var(--folder-scale)); white-space: nowrap; color: var(--navy); }
+    .up-badge.fl-badge { background: var(--amber); color: #fff8ef; }
+    .fl-desc {
+      flex: none;
+      font-size: calc(7.6px * var(--folder-scale));
+      line-height: 1.3;
+      color: var(--slate);
+    }
+    .fl-foot { justify-content: space-between; }
+    .fl-song {
+      padding: calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale));
+      border-radius: 999px;
+      background: rgba(58, 80, 107, 0.12);
+      color: var(--slate);
+      font-size: calc(7px * var(--folder-scale));
       white-space: nowrap;
     }
     /* "Upcoming" placeholder cards: skeleton blocks with a soft shimmer */
     .upcoming { padding: 7% 7% 9%; gap: calc(5px * var(--folder-scale)); }
     .sk {
+      position: relative;
       display: block;
+      overflow: hidden;
       border-radius: calc(3px * var(--folder-scale));
-      background: linear-gradient(100deg, #f3e4ea 35%, #fbf1f5 50%, #f3e4ea 65%) 0 0 / 300% 100%;
-      animation: shimmer 1.8s ease-in-out infinite paused;
+      background: #eadccb;
     }
-    .folder-root[data-open] .sk { animation-play-state: running; }   /* only while you can see them */
+    /* the shimmer is a soft light sliding across. It moves with transform, so the GPU
+       animates it alone; moving the background instead repainted the cards every frame */
+    .sk::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(100deg, rgba(255, 250, 243, 0) 30%, rgba(255, 250, 243, 0.55) 50%, rgba(255, 250, 243, 0) 70%);
+      transform: translateX(-100%);
+      animation: shimmer 1.8s ease-in-out infinite paused;
+      pointer-events: none;
+    }
+    .folder-root[data-open] .sk::after { animation-play-state: running; }   /* only while you can see them */
     .sk-line { flex: none; height: calc(4.5px * var(--folder-scale)); border-radius: 999px; }
     .up-pic {
       position: relative;
@@ -176,42 +215,42 @@
       width: 100%;
       aspect-ratio: 1.5;
       margin-bottom: calc(3px * var(--folder-scale));
-      background-image: linear-gradient(100deg, rgba(255, 255, 255, 0) 35%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 65%),
-                        linear-gradient(135deg, #fbe3ee, #efe3f8);
-      background-size: 300% 100%, 100% 100%;
-      box-shadow: inset 0 0 0 1px rgba(214, 150, 185, 0.18);
+      background: linear-gradient(135deg, #a8def0, var(--sky));
+      box-shadow: inset 0 0 0 1px rgba(58, 80, 107, 0.14);
     }
     .up-icon {
+      position: relative;
+      z-index: 1;
       display: grid;
       place-items: center;
       width: 34%;
       aspect-ratio: 1;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.7);
-      box-shadow: 0 calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale)) rgba(214, 120, 165, 0.18);
-      color: #e27aa9;
+      background: rgba(255, 250, 243, 0.6);
+      box-shadow: 0 calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale)) rgba(28, 37, 65, 0.18);
+      color: var(--slate);
     }
     .up-icon svg { width: 58%; height: 58%; }
-    .up-spark { position: absolute; color: #f2a9c9; line-height: 1; }
+    .up-spark { position: absolute; z-index: 1; color: #fbf5ec; line-height: 1; }
     .up-spark.s1 { top: 14%; left: 13%; font-size: calc(8px * var(--folder-scale)); }
     .up-spark.s2 { bottom: 15%; right: 14%; font-size: calc(6px * var(--folder-scale)); opacity: 0.8; }
     .up-row { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-    .up-title { font-size: calc(11.5px * var(--folder-scale)); color: #b0708f; }
+    .up-title { font-size: calc(11.5px * var(--folder-scale)); color: var(--slate); }
     .up-foot { flex: none; display: flex; align-items: center; gap: calc(5px * var(--folder-scale)); margin-top: auto; }
-    .up-bar { flex: 1; height: calc(4px * var(--folder-scale)); border-radius: 999px; background: #f3e4eb; overflow: hidden; }
-    .up-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ffb3d2, #ff6fae); }
-    .up-heart { color: #ff8fbf; font-size: calc(8px * var(--folder-scale)); line-height: 1; }
+    .up-bar { flex: 1; height: calc(4px * var(--folder-scale)); border-radius: 999px; background: #eadccb; overflow: hidden; }
+    .up-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #f0a54a, var(--amber)); }
+    .up-heart { color: var(--amber); font-size: calc(9px * var(--folder-scale)); line-height: 1; white-space: nowrap; }
     .up-badge {
       padding: calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale));
       border-radius: 999px;
-      background: rgba(255, 111, 174, 0.14);
-      color: #e0609a;
+      background: rgba(58, 80, 107, 0.12);
+      color: var(--slate);
       font-size: calc(7.5px * var(--folder-scale));
       letter-spacing: 0.4px;
       text-transform: uppercase;
     }
-    @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-    @media (prefers-reduced-motion: reduce) { .sk { animation: none; } }
+    @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+    @media (prefers-reduced-motion: reduce) { .sk::after { display: none; } }
 
     /* home: back to the folder, top left */
     #home {
@@ -223,12 +262,12 @@
       display: grid;
       place-items: center;
       padding: 0;
-      border: 1.5px solid rgba(255, 158, 199, 0.75);
+      border: 1.5px solid rgba(91, 192, 222, 0.8);
       border-radius: 50%;
-      background: rgba(255, 105, 170, 0.16);
-      box-shadow: 0 0 12px rgba(255, 120, 180, 0.3);
+      background: rgba(28, 37, 65, 0.6);
+      box-shadow: 0 0 12px rgba(91, 192, 222, 0.25);
       backdrop-filter: blur(3px);
-      color: #fff0f6;
+      color: var(--peach);
       cursor: pointer;
       opacity: 0;
       transition: opacity 0.6s ease, background-color 0.2s ease;
@@ -236,8 +275,8 @@
     }
     #home[hidden] { display: none; }
     #home.show { opacity: 0.8; }
-    #home.show:hover, #home.show:focus-visible { opacity: 1; background: rgba(255, 158, 199, 0.3); }
-    #home:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    #home.show:hover, #home.show:focus-visible { opacity: 1; background: rgba(58, 80, 107, 0.75); }
+    #home:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; }
     #home svg { width: 19px; height: 19px; }
     #c { transition: opacity 0.5s ease; }
     #c.leaving { opacity: 0; }
@@ -250,10 +289,10 @@
       display: flex;
       align-items: center;
       padding: 3px;
-      border: 1.5px solid rgba(255, 158, 199, 0.75);
+      border: 1.5px solid rgba(91, 192, 222, 0.8);
       border-radius: 999px;
-      background: rgba(255, 105, 170, 0.16);
-      box-shadow: 0 0 12px rgba(255, 120, 180, 0.3);
+      background: rgba(28, 37, 65, 0.6);
+      box-shadow: 0 0 12px rgba(91, 192, 222, 0.25);
       backdrop-filter: blur(3px);
       opacity: 0;
       transition: opacity 0.6s ease;
@@ -270,12 +309,12 @@
       border: 0;
       border-radius: 50%;
       background: transparent;
-      color: #fff0f6;
+      color: var(--peach);
       cursor: pointer;
       -webkit-tap-highlight-color: transparent;
     }
-    #mute:hover { background: rgba(255, 158, 199, 0.25); }
-    #mute:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+    #mute:hover { background: rgba(58, 80, 107, 0.7); }
+    #mute:focus-visible { outline: 2px solid var(--peach); outline-offset: 1px; }
     #mute svg { width: 20px; height: 20px; overflow: visible; }
     #mute .spk { fill: currentColor; }
     #mute .w1, #mute .w2, #mute .x { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
@@ -288,7 +327,7 @@
       height: 4px;
       margin: 0;
       border-radius: 2px;
-      background: linear-gradient(to right, #ff9ec7 var(--v, 70%), rgba(255, 255, 255, 0.25) var(--v, 70%));
+      background: linear-gradient(to right, var(--sky) var(--v, 70%), var(--slate) var(--v, 70%));
       opacity: 0;
       visibility: hidden;            /* collapsed: the knob must not peek out either */
       cursor: pointer;
@@ -310,17 +349,17 @@
       -webkit-appearance: none;
       width: 14px; height: 14px;
       border-radius: 50%;
-      background: #fff0f6;
-      border: 2px solid #ff6fae;
+      background: var(--peach);
+      border: 2px solid var(--slate);
     }
     #volume::-moz-range-thumb {
       width: 11px; height: 11px;
       border-radius: 50%;
-      background: #fff0f6;
-      border: 2px solid #ff6fae;
+      background: var(--peach);
+      border: 2px solid var(--slate);
     }
     #volume:focus { outline: none; }
-    #volume:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.6); }
+    #volume:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px rgba(244, 214, 176, 0.6); }
 
     /* the YouTube player that plays the song: always invisible, never catches taps */
     #yt {
@@ -337,7 +376,7 @@
     #yt iframe { display: block; width: 100%; height: 100%; border: 0; }
 
     noscript {
-      color: #f9a8d4;
+      color: var(--peach);
       font: 16px/1.5 system-ui, sans-serif;
       padding: 16px;
       text-align: center;
