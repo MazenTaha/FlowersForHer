@@ -597,13 +597,28 @@
 
     // the waving paw (in front of everything)
     layer = 5;
+    // A short, bent front leg: the upper arm pokes forward from the chest, the forearm points
+    // up and the paw waves from the elbow just under the chin (out in the open, so it reads
+    // against the night, not lost on the white face), palm out so the beans show. It grows
+    // out of the standing front leg, so the paw lifts off the ground and comes back down.
     if (P.wave > 0.02) {
-      const ang = -1.45 + P.wave * (1.75 + 0.36 * Math.sin(P.wavePh));   // up and out in front, waving
-      const sxp = 0.45, syp = 0.66 + bob;
-      const px = sxp + 1.1 * Math.cos(ang), py = syp + 1.1 * Math.sin(ang);
-      paint(shC(sxp, syp, px, py, 0.105), CAL_WHITE, 0);
-      paint(shE(px, py, 0.13, 0.12), CAL_WHITE, 0);
-      paint(shE(px + 0.02 * Math.cos(ang), py + 0.06, 0.05, 0.035), PINK, 0);  // toe bean
+      const w = P.wave, lerp = (a, b) => a + (b - a) * w;
+      const fa = 1.2 + 0.32 * Math.sin(P.wavePh);             // forearm: up, tipped forward, swinging
+      const ux = 1.02, uy = 0.38 + bob;                        // elbow when raised
+      const sx0 = lerp(0.26, 0.55), sy0 = lerp(0.46, 0.58) + bob;                // shoulder
+      const ex = lerp(0.28, ux), ey = lerp(0.26 + bob, uy);                       // elbow
+      const px = lerp(0.3, ux + 0.4 * Math.cos(fa)), py = lerp(0.08, uy + 0.4 * Math.sin(fa));     // paw
+      paint(shC(sx0, sy0, ex, ey, 0.1), CAL_WHITE, 0);         // upper arm
+      paint(shC(ex, ey, px, py, 0.095), CAL_WHITE, 0);         // forearm
+      paint(shE(ex, ey, 0.1, 0.1), CAL_WHITE, 0);              // round elbow
+      const pr = lerp(0.13, 0.21);
+      paint(shE(px, py, pr, pr * 0.95), CAL_WHITE, 0);         // the paw, a round mitten
+      if (w > 0.6) {                                           // palm toward us: a pad and two toe beans
+        const dx = Math.cos(fa), dy = Math.sin(fa), nx = -dy, ny = dx;
+        paint(shE(px - 0.03 * dx, py - 0.03 * dy, 0.095, 0.08), PINK, 0);
+        paint(shE(px + 0.12 * dx + 0.08 * nx, py + 0.12 * dy + 0.08 * ny, 0.055, 0.055), PINK, 0);
+        paint(shE(px + 0.12 * dx - 0.08 * nx, py + 0.12 * dy - 0.08 * ny, 0.055, 0.055), PINK, 0);
+      }
     }
 
     // rasterise: each cell -> cat units (undo hop, lean and squash), then into each space
