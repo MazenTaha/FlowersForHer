@@ -266,8 +266,9 @@
         const gmix = (1 - e) * 0.35;
         for (let k = 0; k < 6; k++) {
           const phi = B.petalRot[f] + k * Math.PI / 3, cp = Math.cos(phi), sp = Math.sin(phi);
-          const rk = [cp * e1[0] + sp * e2[0], cp * e1[1] + sp * e2[1], cp * e1[2] + sp * e2[2]];
-          const tk = [-sp * e1[0] + cp * e2[0], -sp * e1[1] + cp * e2[1], -sp * e1[2] + cp * e2[2]];
+          // petal directions as plain numbers (arrays here were ~150 throwaway objects a frame)
+          const rk0 = cp * e1[0] + sp * e2[0], rk1 = cp * e1[1] + sp * e2[1], rk2 = cp * e1[2] + sp * e2[2];
+          const tk0 = -sp * e1[0] + cp * e2[0], tk1 = -sp * e1[1] + cp * e2[1], tk2 = -sp * e1[2] + cp * e2[2];
           const wf = B.wf[k], lf = B.lf[k], rf = B.rf[k];
           const LR = L * 0.31 * rf, LW = L * 0.25 * wf;
           const g1 = 1 - gmix, bg0 = BUD_GREEN[0] * gmix, bg1 = BUD_GREEN[1] * gmix, bg2 = BUD_GREEN[2] * gmix;
@@ -285,9 +286,9 @@
               const Ao = Aoi - cth * gr, Bo = v * wdt, Co = Coi + sth * gr;
               const A = Ac + (Ao - Ac) * e, Bb = Bc + (Bo - Bc) * e, C = Cc + (Co - Cc) * e;
               const q = (i * NV + j) * 3;
-              GP[q] = hd[0] + A * rk[0] + Bb * tk[0] + C * ax[0];
-              GP[q + 1] = hd[1] + A * rk[1] + Bb * tk[1] + C * ax[1];
-              GP[q + 2] = hd[2] + A * rk[2] + Bb * tk[2] + C * ax[2];
+              GP[q] = hd[0] + A * rk0 + Bb * tk0 + C * ax[0];
+              GP[q + 1] = hd[1] + A * rk1 + Bb * tk1 + C * ax[1];
+              GP[q + 2] = hd[2] + A * rk2 + Bb * tk2 + C * ax[2];
               if (B.speckMask[mi + j]) { GC[q] = sp0; GC[q + 1] = sp1; GC[q + 2] = sp2; }
               else {
                 const pc = (pi + j) * 3;
@@ -340,16 +341,19 @@
         }
       }
       const fr = [bc[0], bc[1], bc[2] + rad + 0.06];
-      for (const sgn of [-1, 1]) {
+      // the two loops: plain numbers, no little arrays (these made ~1000 throwaway objects a
+      // frame, and cleaning them up caused small stutters on slow phones)
+      for (let sgn = -1; sgn <= 1; sgn += 2) {
         for (let i = 0; i < 48; i++) {
           const la = i * TAU / 47, cl = Math.cos(la), sl = Math.sin(la);
-          const tan = norm3([sgn * 0.21 * sl, 0.13 * cl, 0]);
-          const side = [tan[1], -tan[0], 0];
+          let tx = sgn * 0.21 * sl, ty = 0.13 * cl;
+          const tl = Math.sqrt(tx * tx + ty * ty) || 1e-9; tx /= tl; ty /= tl;
+          const sx = ty, sy = -tx;                       // side = tangent turned 90 degrees
           for (let j = 0; j < 8; j++) {
             const ta = j * TAU / 8, ct = Math.cos(ta), st = Math.sin(ta);
-            const n = [ct * side[0], ct * side[1], st];
-            add(fr[0] + sgn * 0.21 * (1 - cl) * k + 0.045 * k * n[0], fr[1] + 0.13 * sl * k + 0.045 * k * n[1],
-                fr[2] + 0.03 + 0.045 * k * n[2], n[0], n[1], n[2], RIBBON[0] * 1.05, RIBBON[1] * 1.05, RIBBON[2] * 1.05, -1, 301);
+            const n0 = ct * sx, n1 = ct * sy, n2 = st;
+            add(fr[0] + sgn * 0.21 * (1 - cl) * k + 0.045 * k * n0, fr[1] + 0.13 * sl * k + 0.045 * k * n1,
+                fr[2] + 0.03 + 0.045 * k * n2, n0, n1, n2, RIBBON[0] * 1.05, RIBBON[1] * 1.05, RIBBON[2] * 1.05, -1, 301);
           }
         }
         for (let i = 0; i < 30; i++) {
@@ -1030,6 +1034,9 @@
     image = ctx.createImageData(canvas.width, canvas.height);
     image32 = new Uint32Array(image.data.buffer);
     textCache.clear();
+    // shape the name's big letters now, while nothing is moving, instead of on the frame the
+    // speech bubble pops up (that one frame took ~100 ms on a slow phone: a visible stutter)
+    if (INTRO) (window.requestIdleCallback || ((f) => setTimeout(f, 50)))(() => bubbleLayout(), { timeout: 1500 });
   }
 
   function compose() {
@@ -1513,6 +1520,16 @@
   fontReady.catch(() => {}).then(() => {
     layout();
     renderFrame(0);                      // the starry sky behind the folder / "tap to open"
+    // while the folder just sits there, draw the cat and a full bouquet once off-screen (never
+    // painted: the next frame clears the grid) so the browser has that code compiled before the
+    // show. Otherwise the first bouquet frame stalls on slow phones as the lilies start to grow.
+    (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => {
+      if (started) return;
+      const s0 = sparkle;                // leave the twinkle's random sequence untouched
+      if (INTRO) drawIntro(5.6);
+      drawBouquet(bouquet, 8);
+      sparkle = s0;
+    }, { timeout: 3000 });
     gateWaiting = true;
     if (MUSIC_ON && !music.ready && !music.failed) {
       gateLoading = true;                // taps open the page once YouTube has loaded
