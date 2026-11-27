@@ -11,8 +11,7 @@ holographic card (the React Bits `<HoloCard />`, in `public/holocard.js` + `holo
 toward the pointer or a finger and catches the light. Tapping the Vase of Letters card opens a vase of
 roses and blue flowers drawn entirely in coloured letters: a stream of characters pours into the
 vase, the vase fills from the bottom, then the stems and flowers type themselves out of its neck and
-sway gently. A little terminal underneath shows the code "running" (its **▶ again** button pours it
-again). (The folder is the React Bits
+sway gently; **Pour again** plays it from the start. (The folder is the React Bits
 `<Folder />` component, in `public/folder.js` + `folder.css`; React itself loads from a CDN.
 If React can't load, the page falls back to a plain "tap to open" screen.)
 

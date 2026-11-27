@@ -479,7 +479,7 @@
   }
 
   // ================================================================= intro
-  const WALK_IN = 4.0, TALK = 3.0, WALK_OUT = 3.2, INTRO_END = WALK_IN + TALK + WALK_OUT;
+  const WALK_IN = 2.3, TALK = 2.4, WALK_OUT = 1.9, INTRO_END = WALK_IN + TALK + WALK_OUT;   // ~6.6 s in all
   const CAL_WHITE = [250, 246, 238], CAL_ORANGE = [242, 150, 60], CAL_BLACK = [74, 64, 70];
   const PINK = [255, 140, 172], EYE_GREEN = [135, 200, 95], EYE = [30, 22, 28], WHITE = [255, 255, 255];
   const MOUTH = [110, 25, 45];
@@ -914,7 +914,7 @@
   }
 
   // where the cat is at time t: trot in, skid to a stop, stand and talk, wind up, zoom off
-  const BRAKE_AT = 3.2, STOP_AT = 3.6, LEAVE_WINDUP = 0.35;
+  const BRAKE_AT = 1.85, STOP_AT = 2.2, LEAVE_WINDUP = 0.3;
   function catX(t, start, mid, end) {
     const d = mid - start;
     if (t < BRAKE_AT) return start + d * 0.94 * Math.max(0, t) / BRAKE_AT;
@@ -923,6 +923,8 @@
     if (te <= 0) return mid;
     return mid + (end - mid) * Math.pow(Math.min(1, te / (WALK_OUT - LEAVE_WINDUP)), 1.7);
   }
+
+  const TALK_SCRIPT = 3.0;
 
   // a damped wobble: 0 -> peak -> settles
   const wobble = (q, freq, damp) => (q < 0 ? 0 : Math.exp(-damp * q) * Math.sin(freq * q));
@@ -959,8 +961,8 @@
     }
 
     let bubble = 0;
-    const tt = t - WALK_IN;
-    if (tt >= 0 && tt < TALK) {                       // crouch, hop, say the name, wave
+    const tt = (t - WALK_IN) * (TALK_SCRIPT / TALK);  // the hello is timed in its own 3 s, played a bit quicker
+    if (tt >= 0 && tt < TALK_SCRIPT) {                // crouch, hop, say the name, wave
       if (tt < 0.18) {
         const c = Math.sin(Math.PI / 2 * tt / 0.18);
         P.sqy = 1 - 0.14 * c; P.sqx = 1 + 0.09 * c;
@@ -979,7 +981,7 @@
       P.headTilt = -0.17 * smoothstep((tt - 0.9) / 0.35) * (1 - smoothstep((tt - 2.5) / 0.35));
       P.tailSpeed = 8;
       if (tt > 1.9 && tt < 2.15) P.earTwitch = Math.sin((tt - 1.9) / 0.25 * Math.PI);
-      bubble = pop((tt - 0.35) / 0.35) * (1 - smoothstep((tt - (TALK - 0.35)) / 0.3));
+      bubble = pop((tt - 0.35) / 0.35) * (1 - smoothstep((tt - (TALK_SCRIPT - 0.35)) / 0.3));
     }
     const te = t - WALK_IN - TALK;
     if (te >= 0 && te < LEAVE_WINDUP) {               // wind-up before zooming off
@@ -1526,7 +1528,7 @@
     (window.requestIdleCallback || ((f) => setTimeout(f, 300)))(() => {
       if (started) return;
       const s0 = sparkle;                // leave the twinkle's random sequence untouched
-      if (INTRO) drawIntro(5.6);
+      if (INTRO) drawIntro(WALK_IN + 1.3);
       drawBouquet(bouquet, 8);
       sparkle = s0;
     }, { timeout: 3000 });

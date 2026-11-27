@@ -360,7 +360,7 @@
       font-size: calc(7px * var(--folder-scale));
       white-space: nowrap;
     }
-    /* the Vase of Letters page (vase.js): the ASCII vase, a note, and the little terminal */
+    /* the Vase of Letters page (vase.js): the ASCII vase, a note, and "Pour again" */
     #vase {
       position: fixed;
       inset: 0;
@@ -384,66 +384,24 @@
     }
     .vase-frame { flex: 1; min-height: 0; display: grid; place-items: center; }
     .vase-note { flex: none; font-size: 18px; }
-    .term {
+    .vase-again {
       flex: none;
-      overflow: hidden;
-      border: 1px solid rgba(91, 192, 222, 0.35);
-      border-radius: 10px;
-      background: rgba(11, 19, 43, 0.88);
-      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45), 0 0 18px rgba(91, 192, 222, 0.12);
-    }
-    .term-bar {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 8px 6px 10px;
-      border-bottom: 1px solid rgba(91, 192, 222, 0.18);
-      background: rgba(28, 37, 65, 0.9);
-    }
-    .term-bar > i { flex: none; display: block; width: 9px; height: 9px; border-radius: 50%; background: #ff5f57; }
-    .term-bar > i:nth-child(2) { background: #febc2e; }
-    .term-bar > i:nth-child(3) { background: #28c840; }
-    .term-title {
-      flex: 1;
-      min-width: 0;
-      margin-left: 6px;
-      overflow: hidden;
-      color: rgba(244, 214, 176, 0.75);
-      font: 12px/1 Consolas, Menlo, "DejaVu Sans Mono", monospace;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .term-run {
-      padding: 4px 10px;
-      border: 1px solid rgba(91, 192, 222, 0.7);
+      align-self: center;
+      padding: 8px 20px;
+      border: 2px solid var(--sky);
       border-radius: 999px;
-      background: transparent;
+      background: rgba(28, 37, 65, 0.6);
       color: var(--peach);
-      font: 700 13px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      font: 700 16px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 18px rgba(91, 192, 222, 0.3);
       cursor: pointer;
+      transition: background-color 0.2s ease, box-shadow 0.2s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    .term-run:hover { background: rgba(58, 80, 107, 0.75); }
-    .term-run:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; }
-    .term-body { position: relative; height: 128px; overflow: hidden; }
-    .term-code {
-      margin: 0;
-      padding: 6px 0;
-      color: #c9d6f0;
-      font: 11.5px/1.55 Consolas, Menlo, "DejaVu Sans Mono", monospace;
-      white-space: pre;
-      transition: transform 0.25s ease;
-    }
-    .term-code .ln { display: block; padding: 0 12px; }
-    .term-code .ln.on { background: rgba(91, 192, 222, 0.16); box-shadow: inset 2px 0 0 var(--sky); }
-    .term-code i { font-style: normal; }
-    .term-code .k { color: var(--sky); }
-    .term-code .f { color: var(--peach); }
-    .term-code .s { color: #f0a54a; }
-    .term-code .n { color: #b59cff; }
-    .term-code .c { color: #6f84a8; }
-    @media (max-height: 700px) { .term-body { height: 92px; } .vase-stage { gap: 10px; } }
-    @media (max-height: 560px) { .term { display: none; } }
+    .vase-again:hover { background: rgba(58, 80, 107, 0.75); box-shadow: 0 0 26px rgba(91, 192, 222, 0.5); }
+    .vase-again:active { transform: scale(0.97); }
+    .vase-again:focus-visible { outline: 2px solid var(--peach); outline-offset: 3px; }
     /* the Vase of Letters card in the folder: the vase on a terminal-dark panel, a peek at its code */
     .va-pic {
       position: relative;
@@ -642,14 +600,7 @@
         <canvas class="vase-art" role="img" aria-label="A vase of roses and blue flowers, made of coloured letters"></canvas>
       </div>
       <p class="license-note vase-note"></p>
-      <div class="term">
-        <div class="term-bar">
-          <i></i><i></i><i></i>
-          <span class="term-title">ascii_vase.js — pour()</span>
-          <button class="term-run" type="button" aria-label="Pour the vase again">▶ again</button>
-        </div>
-        <div class="term-body" aria-hidden="true"><pre class="term-code"></pre></div>
-      </div>
+      <button class="vase-again" type="button">↺ Pour again</button>
     </div>
   </div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>

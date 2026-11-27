@@ -2,7 +2,7 @@
 // A vase of roses and blue flowers drawn entirely in coloured characters: a stream of
 // letters pours down into the vase, the vase fills from the bottom, then the stems and
 // flowers type themselves out from its neck. Afterwards the flowers sway a little and a
-// few letters keep flickering. Underneath, a little terminal shows the code "running".
+// few letters keep flickering. "Pour again" plays it from the start.
 //
 // Talks to welcome.js through window.ffhVase (the same as license.js):
 //   go()      inside the tap on the folder card: puts #vase in the address
@@ -16,9 +16,7 @@
   const canvas = box.querySelector(".vase-art");
   const frame = box.querySelector(".vase-frame");
   const note = box.querySelector(".vase-note");
-  const codeEl = box.querySelector(".term-code");
-  const codeBody = box.querySelector(".term-body");
-  const againBtn = box.querySelector(".term-run");
+  const againBtn = box.querySelector(".vase-again");
   const homeBtn = box.querySelector(".home-btn");
   const ctx = canvas.getContext("2d");
 
@@ -251,7 +249,6 @@
     PIDX = new Uint8Array(cols * rows).fill(255); PRGB = new Uint8Array(cols * rows * 3);   // 255: draw every cell once
     image = ctx.createImageData(canvas.width, canvas.height);
     image32 = new Uint32Array(image.data.buffer);
-    layoutCode();
   }
 
   let sparkle = 12345;                   // a cheap random generator, no garbage
@@ -347,59 +344,6 @@
     if (bottom >= 0) ctx.putImageData(image, 0, 0, 0, top * gh, W, (bottom - top + 1) * gh);
   }
 
-  // ------------------------------------------------------------------ the little terminal
-  const CODE = [
-    "// ascii_vase.js: every petal is a letter",
-    "const RAMP = \" .:-=+*#%@\";",
-    "",
-    "function pour(t) {",
-    "  for (let row = 0; row < rows; row++) {",
-    "    for (let col = 0; col < cols; col++) {",
-    "      const [r, g, b, a] = sample(col, row, t);",
-    "      if (a < 0.35) continue;   // just air",
-    "      const lum = 0.3 * r + 0.59 * g + 0.11 * b;",
-    "      const glyph = RAMP[Math.round(lum * 9)];",
-    "      if (t < bloomsAt(col, row)) {",
-    "        put(col, row, scramble(), sky(r, g, b));",
-    "      } else {",
-    "        put(col, row, glyph, r, g, b);",
-    "      }",
-    "    }",
-    "  }",
-    "}",
-    "",
-    "function draw(now) {",
-    "  pour(now / 1000);",
-    "  sway(0.8, 5);   // the stems rock a little",
-    "  requestAnimationFrame(draw);",
-    "}",
-  ];
-  const POUR_LINES = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
-  const DRAW_LINES = [19, 20, 21, 22];
-  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  const TOKENS = /(\/\/.*$)|("(?:[^"\\]|\\.)*")|\b(\d+(?:\.\d+)?)\b|\b(const|let|function|for|if|else|continue|return)\b|\b([A-Za-z_]\w*)(?=\()/g;
-  codeEl.innerHTML = CODE.map((line) => `<span class="ln">${esc(line).replace(TOKENS, (m, com, str, num, kw, fn) =>
-    com ? `<i class="c">${com}</i>` : str ? `<i class="s">${str}</i>` : num ? `<i class="n">${num}</i>` :
-    kw ? `<i class="k">${kw}</i>` : `<i class="f">${fn}</i>`) || " "}</span>`).join("");
-  const lineEls = Array.from(codeEl.children);
-  let lineH = 17, bodyH = 100, onLine = -1;
-
-  function layoutCode() {
-    if (onLine >= 0) lineEls[onLine].classList.remove("on");
-    lineH = lineEls[0].offsetHeight || 17; bodyH = codeBody.clientHeight; onLine = -1;
-  }
-  function showLine(i) {
-    if (i === onLine) return;
-    if (onLine >= 0) lineEls[onLine].classList.remove("on");
-    lineEls[i].classList.add("on");
-    onLine = i;
-    const max = Math.max(0, lineEls.length * lineH - bodyH);
-    codeEl.style.transform = `translateY(${-clamp(i * lineH - bodyH / 2 + lineH / 2, 0, max)}px)`;
-  }
-  const codeLine = (t) => t < BUILT
-    ? POUR_LINES[Math.floor(t / 0.3) % POUR_LINES.length]
-    : DRAW_LINES[Math.floor((t - BUILT) / 0.55) % DRAW_LINES.length];
-
   // ------------------------------------------------------------------ running it
   let raf = 0, running = false, t = 0, last = 0, lastDraw = 0;
   function tick(now) {
@@ -409,13 +353,12 @@
     last = now;
     if (t < BUILT + 0.5 || now - lastDraw >= 78) {     // full speed while it builds, then ~12 frames a second: the sway is slow
       render(t); lastDraw = now;
-      showLine(codeLine(t));
     }
     raf = requestAnimationFrame(tick);
   }
   function play(from) {
     t = from; last = performance.now(); lastDraw = 0;
-    if (reduce) { render(BUILT + 1); showLine(DRAW_LINES[0]); return; }   // just the finished vase, still
+    if (reduce) { render(BUILT + 1); return; }      // just the finished vase, still
     running = true;
     if (!raf) raf = requestAnimationFrame(tick);
   }
