@@ -53,7 +53,7 @@
         width,
       }),
       h("p", { className: "license-note" },
-        name ? `Licensed Hunter: ${name}` : "Licensed Hunter", h("span", { "aria-hidden": "true" }, " ✦")));
+        name ? `Licensed Hunter: ${name}` : "Licensed Hunter", h("span", { "aria-hidden": "true" }, " (●'◡'●)")));
   }
 
   let root = null, cameFromHome = false, hideTimer = 0;

@@ -443,6 +443,7 @@ void main() {
       let visible = true;
       let alive = true;
       let calm = 0;
+      let livelyUntil = 0;               // shortly after the pointer moves, every frame counts
 
       const draw = () => {
         if (!gl || !program) return;
@@ -477,6 +478,12 @@ void main() {
       const tick = (now) => {
         raf = 0;
         if (!alive) return;
+        // drifting on its own the card moves slowly: 30 frames a second look the same and cost
+        // half as much (a phone left on this page keeps cool). Touch it and it's 60 again.
+        if (now >= livelyUntil && settingsRef.current.idle && !reduce && !pointerRef.current.inside && now - last < 30) {
+          if (visible) raf = requestAnimationFrame(tick);
+          return;
+        }
         const dt = Math.min(1 / 30, Math.max(1 / 240, (now - last) / 1000));
         last = now;
         const s = settingsRef.current;
@@ -531,6 +538,7 @@ void main() {
       };
 
       const wake = () => {
+        livelyUntil = performance.now() + 1500;
         if (raf || !alive) return;
         calm = 0;
         last = performance.now();
@@ -599,6 +607,8 @@ void main() {
           gl.deleteTexture(texture);
           gl.deleteBuffer(buffer);
           gl.deleteProgram(program);
+          const lose = gl.getExtension("WEBGL_lose_context");   // hand the GPU context back now,
+          if (lose) lose.loseContext();                          // not whenever it's collected
         }
       };
     }, []);

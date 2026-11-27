@@ -97,7 +97,7 @@
     h("span", { className: "up-row" },
       h("span", { className: "up-title fl-title" }, "Hunter License"),
       h("span", { className: "up-badge hx-badge" }, "yours")),
-    h("span", { className: "fl-desc" }, "Thank you for getting me into HxH! Here's your very own Hunter License"),
+    h("span", { className: "fl-desc" }, "Thank you for getting me into HxH :)) Here's your very own Hunter License"),
     h("span", { className: "up-foot fl-foot" },
       h("span", { className: "hx-chip" }, "✦ Exam passed"),
       h("span", { className: "up-heart", "aria-hidden": "true" }, "<3")));
