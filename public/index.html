@@ -17,6 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
   <link rel="preload" href="bouquet.webp" as="image">
   <link rel="stylesheet" href="folder.css">
+  <link rel="stylesheet" href="holocard.css">
   <style>
     :root {
       color-scheme: dark;
@@ -252,8 +253,8 @@
     @keyframes shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
     @media (prefers-reduced-motion: reduce) { .sk::after { display: none; } }
 
-    /* home: back to the folder, top left */
-    #home {
+    /* home: back to the folder, top left (the flowers page and the license page each have one) */
+    .home-btn {
       position: fixed;
       top: calc(14px + env(safe-area-inset-top));
       left: calc(14px + env(safe-area-inset-left));
@@ -273,11 +274,91 @@
       transition: opacity 0.6s ease, background-color 0.2s ease;
       -webkit-tap-highlight-color: transparent;
     }
-    #home[hidden] { display: none; }
-    #home.show { opacity: 0.8; }
-    #home.show:hover, #home.show:focus-visible { opacity: 1; background: rgba(58, 80, 107, 0.75); }
-    #home:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; }
-    #home svg { width: 19px; height: 19px; }
+    .home-btn[hidden] { display: none; }
+    .home-btn.show, #license.show .home-btn { opacity: 0.8; }
+    .home-btn.show:hover, .home-btn.show:focus-visible,
+    #license.show .home-btn:hover, #license.show .home-btn:focus-visible { opacity: 1; background: rgba(58, 80, 107, 0.75); }
+    .home-btn:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; }
+    .home-btn svg { width: 19px; height: 19px; }
+
+    /* the Hunter License page (license.js): the holo card over the starry sky */
+    #license {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 26px;
+      padding: calc(64px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+      box-sizing: border-box;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+    #license[hidden] { display: none; }
+    #license.show { opacity: 1; }
+    .license-stage { display: flex; flex-direction: column; align-items: center; gap: 26px; max-width: 100%; }
+    .license-stage .holo-card { touch-action: none; cursor: grab; }   /* nothing to scroll here: a drag tilts it */
+    .license-stage .holo-card__shadow { background: rgba(91, 192, 222, 0.22); }
+    .license-note {
+      margin: 0;
+      color: var(--peach);
+      font: 700 19px/1.2 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      letter-spacing: 0.5px;
+      text-align: center;
+      text-shadow: 0 0 14px rgba(91, 192, 222, 0.8);
+    }
+
+    /* the Hunter License card in the folder: the license, tilted, on a night-blue panel */
+    .hx-pic {
+      position: relative;
+      flex: none;
+      display: block;
+      width: 100%;
+      aspect-ratio: 1.65;
+      margin-bottom: calc(3px * var(--folder-scale));
+      overflow: hidden;
+      border-radius: calc(3px * var(--folder-scale));
+      background: radial-gradient(circle at 50% 45%, #2b4a74, var(--night) 75%);
+      box-shadow: inset 0 0 0 1px rgba(58, 80, 107, 0.14);
+    }
+    .hx-pic img {
+      position: absolute;
+      top: 8%;
+      left: 50%;
+      height: 84%;
+      width: auto;
+      aspect-ratio: 654 / 1035;
+      border-radius: calc(2.5px * var(--folder-scale));
+      transform: translateX(-50%) rotate(-7deg);
+      box-shadow: 0 calc(3px * var(--folder-scale)) calc(8px * var(--folder-scale)) rgba(0, 0, 0, 0.45);
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+    /* a soft rainbow sheen that sweeps across the little license, like the foil on its page */
+    .hx-pic::after {
+      content: "";
+      position: absolute;
+      inset: -20% -60%;
+      background: linear-gradient(105deg, transparent 40%, rgba(120, 220, 255, 0.28) 46%, rgba(255, 240, 160, 0.3) 50%,
+                  rgba(255, 140, 200, 0.26) 54%, transparent 60%);
+      transform: translateX(-60%);
+      animation: hx-sheen 3.2s ease-in-out infinite paused;
+      pointer-events: none;
+    }
+    .folder-root[data-open] .hx-pic::after { animation-play-state: running; }
+    @keyframes hx-sheen { 0%, 25% { transform: translateX(-60%); } 75%, 100% { transform: translateX(60%); } }
+    @media (prefers-reduced-motion: reduce) { .hx-pic::after { display: none; } }
+    .hx-pic .up-spark { color: #fff4e6; opacity: 0.9; }
+    .up-badge.hx-badge { background: var(--sky); color: var(--night); }
+    .hx-chip {
+      padding: calc(2px * var(--folder-scale)) calc(6px * var(--folder-scale));
+      border-radius: 999px;
+      background: rgba(58, 80, 107, 0.12);
+      color: var(--slate);
+      font-size: calc(7px * var(--folder-scale));
+      white-space: nowrap;
+    }
     #c { transition: opacity 0.5s ease; }
     #c.leaving { opacity: 0; }
 
@@ -387,7 +468,7 @@
   <canvas id="c" role="img" aria-label="A calico cat says hello, then a bouquet of lilies blooms"></canvas>
   <button id="rebloom" type="button">Re-bloom</button>
   <button id="gate" type="button" hidden><span class="flower" aria-hidden="true">🌸</span><span class="hint">tap to open</span></button>
-  <button id="home" type="button" hidden aria-label="Back to the folder" title="Home">
+  <button id="home" class="home-btn" type="button" hidden aria-label="Back to the folder" title="Home">
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M3.5 11 12 4l8.5 7"/>
       <path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>
@@ -406,11 +487,22 @@
   </div>
   <div id="yt"><div id="yt-player"></div></div>
   <div id="welcome" hidden></div>
+  <div id="license" hidden>
+    <button class="home-btn" type="button" aria-label="Back to the folder" title="Home">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 11 12 4l8.5 7"/>
+        <path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>
+      </svg>
+    </button>
+    <div class="license-stage"></div>
+  </div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
   <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
   <script src="folder.js"></script>
+  <script src="holocard.js"></script>
   <script src="welcome.js"></script>
+  <script src="license.js"></script>
   <script src="flowers.js"></script>
 </body>
 </html>
