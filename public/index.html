@@ -360,7 +360,7 @@
       font-size: calc(7px * var(--folder-scale));
       white-space: nowrap;
     }
-    /* the Vase of Letters page (vase.js): the ASCII vase, a note, and "Pour again" */
+    /* the Vase of Letters page (vase.js): the ASCII bouquets, a note, and "Play again" */
     #vase {
       position: fixed;
       inset: 0;
@@ -402,7 +402,7 @@
     .vase-again:hover { background: rgba(58, 80, 107, 0.75); box-shadow: 0 0 26px rgba(91, 192, 222, 0.5); }
     .vase-again:active { transform: scale(0.97); }
     .vase-again:focus-visible { outline: 2px solid var(--peach); outline-offset: 3px; }
-    /* the Vase of Letters card in the folder: the vase on a terminal-dark panel, a peek at its code */
+    /* the Vase of Letters card in the folder: the bouquet of letters on a night panel */
     .va-pic {
       position: relative;
       flex: none;
@@ -412,44 +412,21 @@
       margin-bottom: calc(3px * var(--folder-scale));
       overflow: hidden;
       border-radius: calc(3px * var(--folder-scale));
-      background: radial-gradient(circle at 30% 50%, #1b2a55, #070b18 80%);
+      background: radial-gradient(circle at 50% 45%, #1b2a55, #070b18 80%);
       box-shadow: inset 0 0 0 1px rgba(58, 80, 107, 0.14);
     }
     .va-pic img {
       position: absolute;
-      top: 4%;
-      left: 6%;
-      height: 92%;
+      top: 3%;
+      left: 50%;
+      height: 94%;
       width: auto;
-      filter: brightness(1.3) saturate(1.15);   /* the letters shrink to a haze this small: lift them */
+      transform: translateX(-50%);
+      filter: brightness(1.2) saturate(1.1);   /* the letters shrink to a haze this small: lift them */
       pointer-events: none;
       -webkit-user-drag: none;
     }
-    .va-code {
-      position: absolute;
-      top: 24%;
-      right: 7%;
-      width: 38%;
-      display: flex;
-      flex-direction: column;
-      gap: calc(3.2px * var(--folder-scale));
-    }
-    .va-line { display: block; height: calc(2.6px * var(--folder-scale)); border-radius: 999px; opacity: 0.85; }
-    .va-line.k { background: var(--sky); }
-    .va-line.f { background: var(--peach); }
-    .va-line.s { background: #f0a54a; }
-    .va-line.n { background: #b59cff; }
-    .va-caret {
-      display: block;
-      width: calc(4px * var(--folder-scale));
-      height: calc(6px * var(--folder-scale));
-      background: var(--peach);
-      animation: va-blink 1s steps(1) infinite paused;
-    }
-    .folder-root[data-open] .va-caret { animation-play-state: running; }
-    @keyframes va-blink { 50% { opacity: 0; } }
     .va-pic .up-spark { color: #fff4e6; opacity: 0.9; }
-    .va-pic .up-spark.s1 { left: auto; right: 10%; top: 9%; }
     .up-badge.va-badge { background: var(--navy); color: var(--peach); }
     #c { transition: opacity 0.5s ease; }
     #c.leaving { opacity: 0; }
@@ -600,7 +577,7 @@
         <canvas class="vase-art" role="img" aria-label="A vase of roses and blue flowers, made of coloured letters"></canvas>
       </div>
       <p class="license-note vase-note"></p>
-      <button class="vase-again" type="button">↺ Pour again</button>
+      <button class="vase-again" type="button">↺ Play again</button>
     </div>
   </div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>

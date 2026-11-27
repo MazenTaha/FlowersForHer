@@ -103,22 +103,18 @@
       h("span", { className: "hx-chip" }, "✦ Exam passed"),
       h("span", { className: "up-heart", "aria-hidden": "true" }, "<3")));
 
-  // a vase of roses and blue flowers made of letters, with a peek at the code that types it
-  const CODE_PEEK = [["k", 34], ["f", 70], ["s", 52], ["n", 40], ["k", 62], ["f", 46]];
+  // bouquets made of letters, one turning into the next
   const vase = h("div", { className: "paper polaroid", "aria-label": "A vase of letters" },
     h("span", { className: "va-pic" },
       h("img", { src: "vase.webp", alt: "", draggable: false }),
-      h("span", { className: "va-code", "aria-hidden": "true" },
-        ...CODE_PEEK.map(([kind, w]) => h("span", { className: `va-line ${kind}`, style: { width: `${w}%` } })),
-        h("span", { className: "va-caret" })),
       h("span", { className: "up-spark s1", "aria-hidden": "true" }, "✦"),
       h("span", { className: "up-spark s2", "aria-hidden": "true" }, "✦")),
     h("span", { className: "up-row" },
       h("span", { className: "up-title fl-title" }, "Vase of Letters"),
       h("span", { className: "up-badge va-badge" }, "ascii")),
-    h("span", { className: "fl-desc" }, "Every petal is a letter, poured into a vase just for you"),
+    h("span", { className: "fl-desc" }, "Every petal is a letter, bouquet after bouquet, just for you"),
     h("span", { className: "up-foot fl-foot" },
-      h("span", { className: "hx-chip" }, "▶ ascii_vase.js"),
+      h("span", { className: "hx-chip" }, "✿ made of letters"),
       h("span", { className: "up-heart", "aria-hidden": "true" }, "<3")));
 
   // wide screens: the papers fan out in a row with the flowers in the middle;

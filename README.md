@@ -5,13 +5,15 @@ An animated ASCII lily bouquet website.
 It opens on a little blue folder labelled **"For Asmaa"**. Tap it and three papers come
 out: the **"Flowers for her"** card (a peek at the bouquet, a "new" badge, a little note and the song),
 the **"Hunter License"** card (a thank-you for Hunter × Hunter, with a peek at the license), and the
-**"Vase of Letters"** card (the vase beside a peek at its code). Tapping the Flowers card
+**"Vase of Letters"** card (a peek at the last bouquet). Tapping the Flowers card
 opens the flowers page; tapping the Hunter License card opens the license page, where the license is a
 holographic card (the React Bits `<HoloCard />`, in `public/holocard.js` + `holocard.css`) that tilts
-toward the pointer or a finger and catches the light. Tapping the Vase of Letters card opens a vase of
-roses and blue flowers drawn entirely in coloured letters: a stream of characters pours into the
-vase, the vase fills from the bottom, then the stems and flowers type themselves out of its neck and
-sway gently; **Pour again** plays it from the start. (The folder is the React Bits
+toward the pointer or a finger and catches the light. Tapping the Vase of Letters card opens bouquets drawn entirely in coloured
+letters, one dissolving into the next while the camera slowly moves in: a single round flower on a
+long stem under a thin thread of falling letters, a dome of flowers in a tall slim glass vase, a round
+pot with amber rings, a blue pitcher, a striped vase, and last a close-up of roses, hydrangeas and
+leaves in a blue vase that stays and sways. Outlines are drawn with `- \ | /`, everything else with a
+long ramp of letters, each on a dim block of its own colour; **Play again** plays it from the start. (The folder is the React Bits
 `<Folder />` component, in `public/folder.js` + `folder.css`; React itself loads from a CDN.
 If React can't load, the page falls back to a plain "tap to open" screen.)
 
