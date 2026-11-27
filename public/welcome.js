@@ -22,6 +22,7 @@
   const say = params.has("say") ? params.get("say") : "Asmaa!";
   const name = say.replace(/[\s!?.,~]+$/u, "").trim();
   const LABEL = name ? `For ${name}` : "For you";
+  const PAGES = ["#flowers", "#license", "#vase"];   // the pages a paper opens (anything else is home)
 
   // ---------------------------------------------------------------- talking to flowers.js
   let launcher = null, ready = false, launched = false;
@@ -30,7 +31,7 @@
   window.ffhWelcome = {
     connect(fn) { launcher = fn; notify(); },
     setReady(ok) { ready = !!ok; notify(); },
-    show() { if (!root && location.hash !== "#license") mount(); },   // back home: a fresh folder
+    show() { if (!root && !PAGES.includes(location.hash)) mount(); },   // back home: a fresh folder
     hide() {                               // another page was opened by its address
       if (!root) return;
       root.unmount(); root = null;
@@ -56,19 +57,19 @@
     }, 450);
   }
 
-  // the Hunter License card: opens its own page (license.js)
-  function openLicense() {
-    if (launched || !window.ffhLicense) return;
+  // the Hunter License (license.js) and the Vase of Letters (vase.js): each opens its own page
+  function openPage(page) {
+    if (launched || !page) return;
     launched = true;
     notify();
-    window.ffhLicense.go();                  // in the tap: #license goes in the address
+    page.go();                               // in the tap: the page goes in the address
     setTimeout(() => {                       // the same zoom-and-fade as the flowers
       box.classList.add("gone");
       setTimeout(() => {
         if (root) { root.unmount(); root = null; }
         box.hidden = true;
         box.classList.remove("gone");
-        window.ffhLicense.enter();
+        page.enter();
       }, 700);
     }, 450);
   }
@@ -102,34 +103,32 @@
       h("span", { className: "hx-chip" }, "✦ Exam passed"),
       h("span", { className: "up-heart", "aria-hidden": "true" }, "<3")));
 
-  // placeholder cards for what's coming next: a skeleton picture with a little icon, a title
-  // with a "soon" badge, two skeleton lines and an "in the making" progress bar
-  const svg = (paths) => h("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", fill: "none", stroke: "currentColor",
-    strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round" }, ...paths.map((d) => h("path", { d })));
-  const GIFT = ["M4 11h16v9H4z", "M3 7.5h18V11H3z", "M12 7.5V20", "M12 7.5C10.5 4 7 4 7.2 6.2 7.4 7.5 12 7.5 12 7.5z",
-    "M12 7.5c1.5-3.5 5-3.5 4.8-1.3-.2 1.3-4.8 1.3-4.8 1.3z"];
-  const upcoming = (icon, lines, progress) => h("div", { className: "paper upcoming", "aria-label": "Upcoming, coming soon" },
-    h("span", { className: "sk up-pic" },
-      h("span", { className: "up-icon" }, svg(icon)),
+  // a vase of roses and blue flowers made of letters, with a peek at the code that types it
+  const CODE_PEEK = [["k", 34], ["f", 70], ["s", 52], ["n", 40], ["k", 62], ["f", 46]];
+  const vase = h("div", { className: "paper polaroid", "aria-label": "A vase of letters" },
+    h("span", { className: "va-pic" },
+      h("img", { src: "vase.webp", alt: "", draggable: false }),
+      h("span", { className: "va-code", "aria-hidden": "true" },
+        ...CODE_PEEK.map(([kind, w]) => h("span", { className: `va-line ${kind}`, style: { width: `${w}%` } })),
+        h("span", { className: "va-caret" })),
       h("span", { className: "up-spark s1", "aria-hidden": "true" }, "✦"),
       h("span", { className: "up-spark s2", "aria-hidden": "true" }, "✦")),
     h("span", { className: "up-row" },
-      h("span", { className: "up-title" }, "Upcoming"),
-      h("span", { className: "up-badge" }, "soon")),
-    ...lines.map((w) => h("span", { className: "sk sk-line", style: { width: w } })),
-    h("span", { className: "up-foot" },
-      h("span", { className: "up-bar" }, h("span", { style: { width: progress } })),
+      h("span", { className: "up-title fl-title" }, "Vase of Letters"),
+      h("span", { className: "up-badge va-badge" }, "ascii")),
+    h("span", { className: "fl-desc" }, "Every petal is a letter, poured into a vase just for you"),
+    h("span", { className: "up-foot fl-foot" },
+      h("span", { className: "hx-chip" }, "▶ ascii_vase.js"),
       h("span", { className: "up-heart", "aria-hidden": "true" }, "<3")));
-  const soon = upcoming(GIFT, ["90%", "66%"], "62%");
 
   // wide screens: the papers fan out in a row with the flowers in the middle;
   // narrow screens: they stand up in a stack with the flowers in front
   function fit() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const spread = Math.min((vw - 32) / (224 * 2.35), (vh - 140) / 270, 2);
-    if (spread >= 0.95) return { layout: "spread", size: spread, order: [hunter, flowers, soon] };
+    if (spread >= 0.95) return { layout: "spread", size: spread, order: [hunter, flowers, vase] };
     const stack = Math.max(0.6, Math.min((vw - 40) / 224, (vh - 150) / 300, 2));
-    return { layout: "stack", size: stack, order: [flowers, hunter, soon] };
+    return { layout: "stack", size: stack, order: [flowers, hunter, vase] };
   }
 
   function Welcome() {
@@ -162,7 +161,8 @@
         onItemClick: (item, index) => {
           const paper = view.order[index];
           if (paper === flowers) launch();
-          else if (paper === hunter) openLicense();
+          else if (paper === hunter) openPage(window.ffhLicense);
+          else if (paper === vase) openPage(window.ffhVase);
         },
       }),
       h("p", { className: "welcome-hint", "aria-live": "polite" }, hint));
@@ -175,6 +175,6 @@
     root = window.ReactDOM.createRoot(box);
     root.render(h(Welcome));
   }
-  // a link straight to the flowers page or the license skips the folder
-  if (location.hash !== "#flowers" && location.hash !== "#license") mount();
+  // a link straight to one of the pages skips the folder
+  if (!PAGES.includes(location.hash)) mount();
 })();

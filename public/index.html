@@ -275,9 +275,10 @@
       -webkit-tap-highlight-color: transparent;
     }
     .home-btn[hidden] { display: none; }
-    .home-btn.show, #license.show .home-btn { opacity: 0.8; }
+    .home-btn.show, #license.show .home-btn, #vase.show .home-btn { opacity: 0.8; }
     .home-btn.show:hover, .home-btn.show:focus-visible,
-    #license.show .home-btn:hover, #license.show .home-btn:focus-visible { opacity: 1; background: rgba(58, 80, 107, 0.75); }
+    #license.show .home-btn:hover, #license.show .home-btn:focus-visible,
+    #vase.show .home-btn:hover, #vase.show .home-btn:focus-visible { opacity: 1; background: rgba(58, 80, 107, 0.75); }
     .home-btn:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; }
     .home-btn svg { width: 19px; height: 19px; }
 
@@ -359,6 +360,139 @@
       font-size: calc(7px * var(--folder-scale));
       white-space: nowrap;
     }
+    /* the Vase of Letters page (vase.js): the ASCII vase, a note, and the little terminal */
+    #vase {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: calc(64px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+      box-sizing: border-box;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+    #vase[hidden] { display: none; }
+    #vase.show { opacity: 1; }
+    .vase-stage {
+      flex: 1;
+      min-height: 0;
+      width: min(100%, 440px);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .vase-frame { flex: 1; min-height: 0; display: grid; place-items: center; }
+    .vase-note { flex: none; font-size: 18px; }
+    .term {
+      flex: none;
+      overflow: hidden;
+      border: 1px solid rgba(91, 192, 222, 0.35);
+      border-radius: 10px;
+      background: rgba(11, 19, 43, 0.88);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45), 0 0 18px rgba(91, 192, 222, 0.12);
+    }
+    .term-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px 6px 10px;
+      border-bottom: 1px solid rgba(91, 192, 222, 0.18);
+      background: rgba(28, 37, 65, 0.9);
+    }
+    .term-bar > i { flex: none; display: block; width: 9px; height: 9px; border-radius: 50%; background: #ff5f57; }
+    .term-bar > i:nth-child(2) { background: #febc2e; }
+    .term-bar > i:nth-child(3) { background: #28c840; }
+    .term-title {
+      flex: 1;
+      min-width: 0;
+      margin-left: 6px;
+      overflow: hidden;
+      color: rgba(244, 214, 176, 0.75);
+      font: 12px/1 Consolas, Menlo, "DejaVu Sans Mono", monospace;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .term-run {
+      padding: 4px 10px;
+      border: 1px solid rgba(91, 192, 222, 0.7);
+      border-radius: 999px;
+      background: transparent;
+      color: var(--peach);
+      font: 700 13px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .term-run:hover { background: rgba(58, 80, 107, 0.75); }
+    .term-run:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; }
+    .term-body { position: relative; height: 128px; overflow: hidden; }
+    .term-code {
+      margin: 0;
+      padding: 6px 0;
+      color: #c9d6f0;
+      font: 11.5px/1.55 Consolas, Menlo, "DejaVu Sans Mono", monospace;
+      white-space: pre;
+      transition: transform 0.25s ease;
+    }
+    .term-code .ln { display: block; padding: 0 12px; }
+    .term-code .ln.on { background: rgba(91, 192, 222, 0.16); box-shadow: inset 2px 0 0 var(--sky); }
+    .term-code i { font-style: normal; }
+    .term-code .k { color: var(--sky); }
+    .term-code .f { color: var(--peach); }
+    .term-code .s { color: #f0a54a; }
+    .term-code .n { color: #b59cff; }
+    .term-code .c { color: #6f84a8; }
+    @media (max-height: 700px) { .term-body { height: 92px; } .vase-stage { gap: 10px; } }
+    @media (max-height: 560px) { .term { display: none; } }
+    /* the Vase of Letters card in the folder: the vase on a terminal-dark panel, a peek at its code */
+    .va-pic {
+      position: relative;
+      flex: none;
+      display: block;
+      width: 100%;
+      aspect-ratio: 1.65;
+      margin-bottom: calc(3px * var(--folder-scale));
+      overflow: hidden;
+      border-radius: calc(3px * var(--folder-scale));
+      background: radial-gradient(circle at 30% 50%, #1b2a55, #070b18 80%);
+      box-shadow: inset 0 0 0 1px rgba(58, 80, 107, 0.14);
+    }
+    .va-pic img {
+      position: absolute;
+      top: 4%;
+      left: 6%;
+      height: 92%;
+      width: auto;
+      filter: brightness(1.3) saturate(1.15);   /* the letters shrink to a haze this small: lift them */
+      pointer-events: none;
+      -webkit-user-drag: none;
+    }
+    .va-code {
+      position: absolute;
+      top: 24%;
+      right: 7%;
+      width: 38%;
+      display: flex;
+      flex-direction: column;
+      gap: calc(3.2px * var(--folder-scale));
+    }
+    .va-line { display: block; height: calc(2.6px * var(--folder-scale)); border-radius: 999px; opacity: 0.85; }
+    .va-line.k { background: var(--sky); }
+    .va-line.f { background: var(--peach); }
+    .va-line.s { background: #f0a54a; }
+    .va-line.n { background: #b59cff; }
+    .va-caret {
+      display: block;
+      width: calc(4px * var(--folder-scale));
+      height: calc(6px * var(--folder-scale));
+      background: var(--peach);
+      animation: va-blink 1s steps(1) infinite paused;
+    }
+    .folder-root[data-open] .va-caret { animation-play-state: running; }
+    @keyframes va-blink { 50% { opacity: 0; } }
+    .va-pic .up-spark { color: #fff4e6; opacity: 0.9; }
+    .va-pic .up-spark.s1 { left: auto; right: 10%; top: 9%; }
+    .up-badge.va-badge { background: var(--navy); color: var(--peach); }
     #c { transition: opacity 0.5s ease; }
     #c.leaving { opacity: 0; }
 
@@ -496,6 +630,28 @@
     </button>
     <div class="license-stage"></div>
   </div>
+  <div id="vase" hidden>
+    <button class="home-btn" type="button" aria-label="Back to the folder" title="Home">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3.5 11 12 4l8.5 7"/>
+        <path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>
+      </svg>
+    </button>
+    <div class="vase-stage">
+      <div class="vase-frame">
+        <canvas class="vase-art" role="img" aria-label="A vase of roses and blue flowers, made of coloured letters"></canvas>
+      </div>
+      <p class="license-note vase-note"></p>
+      <div class="term">
+        <div class="term-bar">
+          <i></i><i></i><i></i>
+          <span class="term-title">ascii_vase.js — pour()</span>
+          <button class="term-run" type="button" aria-label="Pour the vase again">▶ again</button>
+        </div>
+        <div class="term-body" aria-hidden="true"><pre class="term-code"></pre></div>
+      </div>
+    </div>
+  </div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
   <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
@@ -503,6 +659,7 @@
   <script src="holocard.js"></script>
   <script src="welcome.js"></script>
   <script src="license.js"></script>
+  <script src="vase.js"></script>
   <script src="flowers.js"></script>
 </body>
 </html>
