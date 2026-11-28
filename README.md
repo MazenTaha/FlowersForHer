@@ -4,16 +4,11 @@ An animated ASCII lily bouquet website.
 
 It opens on a little blue folder labelled **"For Asmaa"**. Tap it and three papers come
 out: the **"Flowers for her"** card (a peek at the bouquet, a "new" badge, a little note and the song),
-the **"Hunter License"** card (a thank-you for Hunter × Hunter, with a peek at the license), and the
-**"Vase of Letters"** card (a peek at the last bouquet). Tapping the Flowers card
+the **"Hunter License"** card (a thank-you for Hunter × Hunter, with a peek at the license), and an
+**"Upcoming"** placeholder card (skeleton picture and lines, a "soon" badge). Tapping the Flowers card
 opens the flowers page; tapping the Hunter License card opens the license page, where the license is a
 holographic card (the React Bits `<HoloCard />`, in `public/holocard.js` + `holocard.css`) that tilts
-toward the pointer or a finger and catches the light. Tapping the Vase of Letters card opens bouquets drawn entirely in coloured
-letters, one dissolving into the next while the camera slowly moves in: a single round flower on a
-long stem under a thin thread of falling letters, a dome of flowers in a tall slim glass vase, a round
-pot with amber rings, a blue pitcher, a striped vase, and last a close-up of roses, hydrangeas and
-leaves in a blue vase that stays and sways. Outlines are drawn with `- \ | /`, everything else with a
-long ramp of letters, each on a dim block of its own colour; **Play again** plays it from the start. (The folder is the React Bits
+toward the pointer or a finger and catches the light. (The folder is the React Bits
 `<Folder />` component, in `public/folder.js` + `folder.css`; React itself loads from a CDN.
 If React can't load, the page falls back to a plain "tap to open" screen.)
 
@@ -32,8 +27,7 @@ breathing, while pastel stars twinkle behind them.
 Everything lives in `public/` (plain JavaScript, no build step): `index.html`,
 `flowers.js` (the animation and music), `welcome.js` + `folder.js` + `folder.css` (the
 opening folder), `bouquet.webp` (the polaroid's picture, a frame of the bouquet), and
-`license.js` + `holocard.js` + `holocard.css` + `hunter-license.webp` (the license page), and
-`vase.js` + `vase.webp` (the Vase of Letters page and its card's picture).
+`license.js` + `holocard.js` + `holocard.css` + `hunter-license.webp` (the license page).
 
 Try it locally with any static file server, for example:
 
@@ -74,8 +68,7 @@ only: leaving it stops the song, and if anything starts it while the folder is s
 (phone lock-screen or headphone controls, media keys) it is paused straight away. The
 browser's back/forward buttons move between the two pages, and a link straight to
 `…/#flowers` opens the flowers page with a "tap to open" (phones need a tap before music).
-The license and the vase have their own pages too, **`#license`** and **`#vase`**, each with its
-own home button.
+The license has its own page too, **`#license`**, with its own home button.
 
 ### Music
 

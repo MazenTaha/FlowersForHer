@@ -275,10 +275,9 @@
       -webkit-tap-highlight-color: transparent;
     }
     .home-btn[hidden] { display: none; }
-    .home-btn.show, #license.show .home-btn, #vase.show .home-btn { opacity: 0.8; }
+    .home-btn.show, #license.show .home-btn { opacity: 0.8; }
     .home-btn.show:hover, .home-btn.show:focus-visible,
-    #license.show .home-btn:hover, #license.show .home-btn:focus-visible,
-    #vase.show .home-btn:hover, #vase.show .home-btn:focus-visible { opacity: 1; background: rgba(58, 80, 107, 0.75); }
+    #license.show .home-btn:hover, #license.show .home-btn:focus-visible { opacity: 1; background: rgba(58, 80, 107, 0.75); }
     .home-btn:focus-visible { outline: 2px solid var(--peach); outline-offset: 2px; }
     .home-btn svg { width: 19px; height: 19px; }
 
@@ -360,74 +359,6 @@
       font-size: calc(7px * var(--folder-scale));
       white-space: nowrap;
     }
-    /* the Vase of Letters page (vase.js): the ASCII bouquets, a note, and "Play again" */
-    #vase {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: calc(64px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
-      box-sizing: border-box;
-      opacity: 0;
-      transition: opacity 0.45s ease;
-    }
-    #vase[hidden] { display: none; }
-    #vase.show { opacity: 1; }
-    .vase-stage {
-      flex: 1;
-      min-height: 0;
-      width: min(100%, 440px);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .vase-frame { flex: 1; min-height: 0; display: grid; place-items: center; }
-    .vase-note { flex: none; font-size: 18px; }
-    .vase-again {
-      flex: none;
-      align-self: center;
-      padding: 8px 20px;
-      border: 2px solid var(--sky);
-      border-radius: 999px;
-      background: rgba(28, 37, 65, 0.6);
-      color: var(--peach);
-      font: 700 16px/1 "Comic Neue", "Comic Sans MS", "Chalkboard SE", cursive;
-      letter-spacing: 0.5px;
-      box-shadow: 0 0 18px rgba(91, 192, 222, 0.3);
-      cursor: pointer;
-      transition: background-color 0.2s ease, box-shadow 0.2s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .vase-again:hover { background: rgba(58, 80, 107, 0.75); box-shadow: 0 0 26px rgba(91, 192, 222, 0.5); }
-    .vase-again:active { transform: scale(0.97); }
-    .vase-again:focus-visible { outline: 2px solid var(--peach); outline-offset: 3px; }
-    /* the Vase of Letters card in the folder: the bouquet of letters on a night panel */
-    .va-pic {
-      position: relative;
-      flex: none;
-      display: block;
-      width: 100%;
-      aspect-ratio: 1.65;
-      margin-bottom: calc(3px * var(--folder-scale));
-      overflow: hidden;
-      border-radius: calc(3px * var(--folder-scale));
-      background: radial-gradient(circle at 50% 45%, #1b2a55, #070b18 80%);
-      box-shadow: inset 0 0 0 1px rgba(58, 80, 107, 0.14);
-    }
-    .va-pic img {
-      position: absolute;
-      top: 3%;
-      left: 50%;
-      height: 94%;
-      width: auto;
-      transform: translateX(-50%);
-      filter: brightness(1.2) saturate(1.1);   /* the letters shrink to a haze this small: lift them */
-      pointer-events: none;
-      -webkit-user-drag: none;
-    }
-    .va-pic .up-spark { color: #fff4e6; opacity: 0.9; }
-    .up-badge.va-badge { background: var(--navy); color: var(--peach); }
     #c { transition: opacity 0.5s ease; }
     #c.leaving { opacity: 0; }
 
@@ -565,21 +496,6 @@
     </button>
     <div class="license-stage"></div>
   </div>
-  <div id="vase" hidden>
-    <button class="home-btn" type="button" aria-label="Back to the folder" title="Home">
-      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3.5 11 12 4l8.5 7"/>
-        <path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>
-      </svg>
-    </button>
-    <div class="vase-stage">
-      <div class="vase-frame">
-        <canvas class="vase-art" role="img" aria-label="A vase of roses and blue flowers, made of coloured letters"></canvas>
-      </div>
-      <p class="license-note vase-note"></p>
-      <button class="vase-again" type="button">↺ Play again</button>
-    </div>
-  </div>
   <noscript>This little bouquet needs JavaScript to bloom.</noscript>
   <script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js" crossorigin></script>
   <script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
@@ -587,7 +503,6 @@
   <script src="holocard.js"></script>
   <script src="welcome.js"></script>
   <script src="license.js"></script>
-  <script src="vase.js"></script>
   <script src="flowers.js"></script>
 </body>
 </html>
